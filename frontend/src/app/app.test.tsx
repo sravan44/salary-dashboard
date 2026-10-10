@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { renderApp } from '../test/render-app'
 
 describe('App shell', () => {
-  it('shows the product name and main navigation', () => {
+  it('shows the product name and main navigation', async () => {
     renderApp()
 
-    expect(screen.getByRole('heading', { name: 'ACME Salary Insights' })).toBeInTheDocument()
-    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(await screen.findByRole('heading', { name: 'ACME Salary Insights' })).toBeInTheDocument()
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(nav).toHaveTextContent('Dashboard')
     expect(nav).toHaveTextContent('Employees')
   })
@@ -21,7 +21,7 @@ describe('App shell', () => {
   it('navigates to the employees page from the menu', async () => {
     renderApp()
 
-    await userEvent.click(screen.getByRole('link', { name: 'Employees' }))
+    await userEvent.click(await screen.findByRole('link', { name: 'Employees' }))
 
     expect(screen.getByRole('heading', { name: 'Employees' })).toBeInTheDocument()
   })

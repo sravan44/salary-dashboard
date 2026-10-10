@@ -50,4 +50,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
   CMD curl -fsS http://localhost:3000/up || exit 1
 # On start: create/migrate the database, seed demo data if it is empty (only when AUTO_SEED=true), serve.
-CMD ["sh", "-c", "bin/rails db:prepare && bin/rails app:seed_if_empty && bin/rails server -b 0.0.0.0 -p 3000"]
+# users:seed_demo creates demo accounts only when DEMO_USER_PASSWORD is set (compose sets it locally).
+CMD ["sh", "-c", "bin/rails db:prepare && bin/rails app:seed_if_empty && bin/rails users:seed_demo && bin/rails server -b 0.0.0.0 -p 3000"]

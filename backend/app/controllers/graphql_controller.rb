@@ -1,5 +1,9 @@
 # POST /graphql: { query, variables, operationName } → { data, errors }.
+# Any signed-in user may read the dashboard (aggregates only; individual salaries are not exposed).
 class GraphqlController < ApplicationController
+  include Authentication
+
+  allow_signed_out only: :method_not_allowed
   def execute
     result = schema.execute(
       params[:query],

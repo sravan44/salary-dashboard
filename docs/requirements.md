@@ -18,7 +18,7 @@ ACME's HR team manages salary data for **10,000 employees in several countries**
 | F3 | **Salary history and audit** | A salary change is a new effective-dated record with a **reason** (hire, annual review, promotion, market adjustment, correction) and optional notes. The previous record is closed in the **same transaction**, and history is never overwritten. Every create/update of an employee or salary is also written to an append-only **audit log** (who, when, old → new). |
 | F4 | **Pay insights (tables)** | Headcount, plus min / max / average / median salary by country, department and job title for **active** employees. Filterable by country, department and job title. Figures are **always grouped by currency**, never summed across currencies. |
 | F4b | **Visual dashboard** | KPI tiles (active headcount, countries, currencies in use) and six charts: headcount by country, headcount by department, hires by year, salary distribution, median and range by department, median by job title. Each chart's **type can be switched** (e.g. bar, column or pie) and every chart has a table view. The charts follow the same filters (multi-select: country, department, job title). Salary charts show **one currency at a time**, so currencies are never mixed. Built on a GraphQL API with query limits, plus GraphiQL for exploration. |
-| F5 | **Access** | One authenticated HR Manager role protects every salary endpoint. |
+| F5 | **Access** | Sign-in is required for everything. Roles combine (a user may hold several): **Viewer** sees only the dashboard (no individual employees or salaries); **HR manager** also manages employees and sees their salaries; **Admin** also manages users and their roles (multi-select). The server enforces every rule; the UI only shows what a role allows. |
 | F6 | **Seed** | A deterministic script creates exactly 10,000 synthetic employees and is safe to re-run. |
 
 **Phase 2 (only after F1–F6 are done and tested):** indicative **FX conversion**. The HR Manager chooses a reporting currency and sees converted figures with the rate, rate date and source (Frankfurter). Source salaries are never changed.
@@ -33,7 +33,7 @@ ACME's HR team manages salary data for **10,000 employees in several countries**
 |----------|--------|
 | Payroll run, tax, payslips, benefits, statutory filing | A different product with legal liability. The ask is *managing and understanding* pay. |
 | Bonus, equity, allowances (total comp) | Mixing components without a policy misleads. Base salary answers the stated questions. |
-| Approval workflows, multiple roles, SSO | That would invent a business process nobody asked for. One trusted HR role is enough to protect the data. |
+| Approval workflows, SSO, self sign-up | That would invent a business process nobody asked for. Three fixed roles (Viewer, HR manager, Admin) cover who may see and change what. |
 | Gender or demographic pay-equity analysis | Needs sensitive data and legal input. Too high-stakes to approximate. |
 | Spreadsheet bulk import / export | High value, but parsing and error-reporting are a feature in their own right. First follow-up candidate. |
 | Custom or ad-hoc chart builder, saved dashboards, full-text fuzzy search | Fixed charts answer the four questions above. Substring search covers names and IDs at 10k scale. |

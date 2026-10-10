@@ -10,7 +10,7 @@ The assessment brief does not settle several business rules. Each one below is a
 | A4 | How are changes effective-dated? | A new record starts on `effective_from`. The previous record gets `effective_to = new.effective_from - 1 day`. The new date must be **after** the latest record's start and **not in the future**. | Retro-corrections and pre-planned raises are not supported | HR needs scheduled raises or corrections |
 | A5 | Can history be edited or deleted? | No. History is append-only; a correction is a new record. | A typo stays in history | Audit/correction workflow requested |
 | A6 | Can employees be deleted? | No. Status becomes `terminated`, and history and the record are kept. | — | Data-retention policy defined |
-| A7 | Who may access the data? | A single `hr_manager` role, authenticated. Every API route except login and health requires it. | Too coarse for a real org | Multiple roles or regions requested |
+| A7 | Who may access the data? | Every API and GraphQL request needs a signed-in user. Roles combine: `viewer` (dashboard only), `hr_manager` (+ employees and salaries), `admin` (+ users and roles) (decided by Sravan, replacing the single HR role). | Too coarse for regions or departments | Regional or per-department access requested |
 | A8 | Approvals? | None in the MVP | Changes take effect immediately | Approval policy exists |
 | A9 | Which population does Insights cover? | Active employees and their current salary | HR expected terminated staff included | HR clarifies |
 | A10 | Median definition | For an even count, the mean of the two middle values. Results are rounded to 2 dp, half-up. | — | — |
@@ -20,10 +20,12 @@ The assessment brief does not settle several business rules. Each one below is a
 | A15 | Can a deactivated employee come back? | Yes. Reactivation sets `active` again; both changes are in the audit log (decided by Sravan). | — | — |
 | A16 | Can the hire date be edited? | No, it is locked after creation: it starts the salary history, and changing it would rewrite a salary record (decided by Sravan). | A wrong hire date stays | A correction workflow (with M5) is requested |
 | A17 | Does changing an employee's country change their salary currency? | No. Pay changes only through a recorded salary change (M5). | Currency looks wrong after a move | — |
-| A18 | Who is recorded in the audit log before login exists? | `unauthenticated`, honestly, rather than a made-up user. M7 records the signed-in user. | — | M7 |
+| A18 | Who is recorded in the audit log? | The signed-in user's email (since M7). Before login existed, changes were recorded as `unauthenticated`. | — | — |
+| A19 | Can a Viewer infer one person's pay from small groups on the dashboard? | Yes, for now: all aggregates are shown to Viewers (decided by Sravan). A group of one person shows that person's salary. | Pay leaks to Viewers via tiny groups | Before Viewers outside HR get access: hide groups under 5 people |
+| A20 | How do accounts start? | Demo users per role locally (`DEMO_USER_PASSWORD`); `users:create` in production; Admins add users and set roles in the app. No self sign-up, no password reset or account disabling yet. | A forgotten password needs a console fix | Users ask for self-service |
 | A13 | Deployment host | Chosen at M8: the lowest-friction host with managed Postgres. A single container where Rails serves the built React app. | Free-tier limits | — |
 
 ## Explicit assessment requirements vs. assumptions vs. optional ideas
 - **Explicit:** one-page requirements; backend plus React UI; relational DB; seed of 10,000; meaningful unit tests; incremental commits; AI artifacts; deployed app; video demo.
-- **Assumed (above):** A1–A18.
+- **Assumed (above):** A1–A20.
 - **Optional / later:** FX (Phase 2), CSV import/export, Kubernetes manifests and future-service templates, audit log of who changed what.

@@ -1,6 +1,7 @@
 module Api
   module V1
     class EmployeesController < BaseController
+      require_permission :manage_employees
       SINGLE_PARAMS = %i[q currency min_salary max_salary sort page per_page].freeze
       # Accepted as one value (country=DE) or several (country[]=DE&country[]=FR).
       LIST_PARAMS = %i[country department job_title status].freeze

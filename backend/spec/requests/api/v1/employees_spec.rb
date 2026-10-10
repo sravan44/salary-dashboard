@@ -2,6 +2,8 @@ require "rails_helper"
 
 # A small, hand-picked population so every filter has an unambiguous expected result.
 RSpec.describe "Employee directory API" do
+  before { sign_in_as(:hr_manager, email: "hr@acme.example") }
+
   def hire(number, name, country:, department:, title:, amount:, currency:, status: "active", hire_date: Date.new(2020, 1, 15))
     employee = create(:employee, employee_number: number, full_name: name, email: "#{name.parameterize(separator: '.')}@acme.example",
                                  country_code: country, department:, job_title: title, status:, hire_date:)
@@ -246,10 +248,10 @@ RSpec.describe "Employee directory API" do
       )
     end
 
-    it "records who made the change (unauthenticated until login exists)" do
+    it "records the signed-in user as the author" do
       post "/api/v1/employees", params: payload, as: :json
 
-      expect(Version.where(item_type: "Employee").last.whodunnit).to eq("unauthenticated")
+      expect(Version.where(item_type: "Employee").last.whodunnit).to eq("hr@acme.example")
     end
 
     it "returns 422 with errors per field and saves nothing" do

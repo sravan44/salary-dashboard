@@ -7,7 +7,8 @@
 module Versioned
   extend ActiveSupport::Concern
 
-  IGNORED_ATTRIBUTES = %w[id created_at updated_at].freeze
+  # Never logged: technical columns, and secrets (a password digest must not be copied anywhere).
+  IGNORED_ATTRIBUTES = %w[id created_at updated_at password_digest].freeze
 
   included do
     has_many :versions, -> { order(:id) }, as: :item, inverse_of: :item

@@ -1,6 +1,6 @@
 import { ApiError } from './api-client'
 
-type GraphqlBody<T> = { data?: T; errors?: { message: string }[] }
+type GraphqlBody<T> = { data?: T; errors?: { message: string }[]; error?: { code?: string; message?: string } }
 
 /** POST a GraphQL operation to the same-origin /graphql endpoint. Any GraphQL error becomes an ApiError. */
 export async function graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -14,6 +14,9 @@ export async function graphqlRequest<T>(query: string, variables: Record<string,
   if (body.errors?.length) {
     throw new ApiError(response.status, 'graphql_error', body.errors.map((error) => error.message).join('; '))
   }
-  if (!response.ok || !body.data) throw new ApiError(response.status, 'http_error', `Request failed (${response.status})`)
+  if (!response.ok || !body.data) {
+    // Errors outside GraphQL (e.g. 401 when the session has expired) use the API's error shape.
+    throw new ApiError(response.status, body.error?.code ?? 'http_error', body.error?.message ?? `Request failed (${response.status})`)
+  }
   return body.data
 }

@@ -20,6 +20,9 @@ Local defaults (database password, secret key) live in `compose.yaml` and suit l
 - App: http://localhost:3000 · Health: http://localhost:3000/up · REST: http://localhost:3000/api/v1/employees
 - GraphQL: `POST http://localhost:3000/graphql` · GraphiQL explorer: http://localhost:3000/graphiql (enabled locally via `GRAPHIQL_ENABLED`)
 
+**Sign in** with a demo account (compose creates them; password = `DEMO_USER_PASSWORD`, `local-demo-password` unless you set it):
+`viewer@acme.example` (dashboard only) · `hr@acme.example` (dashboard + employees) · `admin@acme.example` (Admin + HR manager: also **Users**).
+
 Build the image on its own with `docker build -t salary-insights .`. It runs in production mode; set `DATABASE_URL` (or `DB_*`) and `SECRET_KEY_BASE`. Leave `FORCE_SSL` at its default (`true`) behind an HTTPS proxy.
 
 ## Run natively (development, with hot reload)
@@ -39,6 +42,13 @@ npm ci
 npm run dev                   # http://localhost:5173
 ```
 Database settings come from `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` (defaults: `localhost`, `5432`, `postgres`, empty).
+
+Accounts (no sign-up page):
+```bash
+DEMO_USER_PASSWORD=<local password> bin/rails users:seed_demo                 # viewer@, hr@, admin@acme.example (local/demo only)
+EMAIL=you@example.com ROLES=admin,hr_manager PASSWORD=<12+ chars> bin/rails users:create   # real deployments
+```
+After that, an Admin adds people and changes roles on the **Users** page.
 
 ## Seed data
 

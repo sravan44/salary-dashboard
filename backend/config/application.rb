@@ -40,6 +40,8 @@ module SalaryInsights
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+    # Sign-in uses an HttpOnly cookie, so the cookie middleware is added back (no session store).
+    config.middleware.use ActionDispatch::Cookies
 
     # The built React app's entry page (see FrontendController). Kept outside public/ so it is
     # never served with the long-lived cache headers used for hashed assets.

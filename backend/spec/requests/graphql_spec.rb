@@ -1,6 +1,9 @@
 require "rails_helper"
 
 RSpec.describe "GraphQL API" do
+  # The dashboard is open to every role; a viewer has the least access.
+  before { sign_in_as(:viewer) }
+
   def graphql(query, variables: {})
     post "/graphql", params: { query:, variables: }.to_json, headers: { "CONTENT_TYPE" => "application/json" }
     response.parsed_body

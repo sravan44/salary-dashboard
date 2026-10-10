@@ -59,7 +59,7 @@ describe('Employee directory', () => {
     it('shows a loading state while results are on their way', async () => {
       renderApp('/employees')
 
-      expect(screen.getByLabelText('Loading employees')).toBeInTheDocument()
+      expect(await screen.findByLabelText('Loading employees')).toBeInTheDocument()
       await screen.findByRole('table', { name: 'Employees' })
     })
   })

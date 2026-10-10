@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Reference data API" do
+  before { sign_in_as(:viewer) }
+
   it "returns the values the UI needs for its filter dropdowns" do
     create(:employee, job_title: "Staff Engineer")
     create(:employee, job_title: "Account Executive")

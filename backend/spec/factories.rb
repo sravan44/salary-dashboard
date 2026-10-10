@@ -18,4 +18,10 @@ FactoryBot.define do
     effective_to { nil }
     reason { "hire" }
   end
+
+  factory :user do
+    sequence(:email) { |n| "user#{n}@acme.example" }
+    password { "correct horse battery" }
+    roles { [ "viewer" ] }
+  end
 end

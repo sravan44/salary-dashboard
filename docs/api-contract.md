@@ -27,7 +27,25 @@ Amounts are serialized as **strings** to avoid float precision loss.
 - `POST /employees` `{ employee: { full_name, email, country_code, department, job_title, hire_date, salary: { amount, currency } } }` → **201** with the employee. The server assigns the next `employee_number` and sets `status: active`. The employee and the first salary (`reason: hire`, `effective_from = hire_date`) are saved in one transaction, or not at all. `hire_date` must be today or earlier.
 - `PATCH /employees/:id` `{ employee: { full_name?, email?, country_code?, department?, job_title?, status? } }` → **200**. `status: terminated` deactivates and `status: active` reactivates; the record is never deleted. Sending `hire_date`, `employee_number` or `salary` returns 422 with the reason on that field. Changing the country does not change the salary currency.
 - Errors: a missing `employee` object returns **400** `invalid_parameters`. Invalid fields return **422** `{ error: { code: "validation_failed", details: { "email": ["has already been taken"], "salary.amount": ["must be greater than 0"] } } }`, and nothing is saved.
-- Every create and update writes an audit `version` in the same transaction (`whodunnit: "unauthenticated"` until M7).
+- Every create and update writes an audit `version` in the same transaction (`whodunnit` = the signed-in user's email).
+
+## Sign-in and access
+Every `/api/v1/*` and `/graphql` request needs a signed-in user, except `POST /session` (and `/up`, the health check). The session token is in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS) and expires 12 hours after sign-in; only its SHA-256 digest is stored. `POST`/`PATCH` bodies must be `application/json` (otherwise **415** `json_required`), which a form on another site cannot send.
+
+- `POST /session` `{ email, password }` → **201** `{ data: { id, email, roles, permissions: { view_dashboard, manage_employees, manage_users } } }`; **401** `invalid_credentials` (same answer for an unknown email and a wrong password); **429** `too_many_attempts` after 10 attempts in 3 minutes from one IP.
+- `GET /session` → the signed-in user, or **401** `unauthenticated`. `DELETE /session` → **204**; the token stops working at once.
+- Not signed in → **401** `unauthenticated`. Signed in without the right role → **403** `forbidden`.
+
+| Endpoint | Viewer | HR manager | Admin |
+|---|---|---|---|
+| `POST /graphql` (dashboard), `GET /reference` | ✓ | ✓ | ✓ |
+| `/employees` (list, profile, create, edit) | 403 | ✓ | 403 (unless also HR manager) |
+| `/users` (list, create, change roles) | 403 | 403 | ✓ |
+
+### Users (Admin)
+- `GET /users` → `{ data: [{ id, email, roles, created_at }] }`, by email. Never includes password data.
+- `POST /users` `{ user: { email, roles: [...], password } }` → **201**. The password must be 12–72 characters, and there must be at least one known role. Otherwise **422** with field errors.
+- `PATCH /users/:id` `{ user: { roles: [...] } }` → **200**. Only roles change here. **422** `roles` if it would remove your own Admin role, or the last Admin's. Role changes are audited (`whodunnit` = the admin's email); password digests never enter the audit log.
 
 ## Compensation
 - `GET /employees/:id/compensations`: full history, newest first

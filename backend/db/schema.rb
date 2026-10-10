@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_085546) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_10_160516) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -30,7 +30,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_085546) do
     t.index ["employee_id"], name: "index_compensations_one_current_per_employee", unique: true, where: "(effective_to IS NULL)"
     t.check_constraint "amount > 0::numeric", name: "compensations_amount_positive"
     t.check_constraint "effective_to IS NULL OR effective_to >= effective_from", name: "compensations_dates_ordered"
-    t.check_constraint "reason::text = ANY (ARRAY['hire'::character varying, 'annual_review'::character varying, 'promotion'::character varying, 'market_adjustment'::character varying, 'correction'::character varying]::text[])", name: "compensations_reason_known"
+    t.check_constraint "reason::text = ANY (ARRAY['hire'::character varying::text, 'annual_review'::character varying::text, 'promotion'::character varying::text, 'market_adjustment'::character varying::text, 'correction'::character varying::text])", name: "compensations_reason_known"
   end
 
   create_table "employees", force: :cascade do |t|
@@ -46,7 +46,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_085546) do
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_employees_on_email", unique: true
     t.index ["employee_number"], name: "index_employees_on_employee_number", unique: true
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'terminated'::character varying]::text[])", name: "employees_status_known"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'terminated'::character varying::text])", name: "employees_status_known"
+  end
+
+  create_table "sessions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_sessions_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "email", null: false
+    t.string "password_digest", null: false
+    t.string "roles", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.check_constraint "cardinality(roles) > 0 AND roles <@ ARRAY['viewer'::character varying, 'hr_manager'::character varying, 'admin'::character varying]", name: "users_roles_valid"
   end
 
   create_table "versions", force: :cascade do |t|
@@ -57,8 +79,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_085546) do
     t.string "whodunnit"
     t.datetime "created_at", null: false
     t.index ["item_type", "item_id", "id"], name: "index_versions_on_item_type_and_item_id_and_id"
-    t.check_constraint "event::text = ANY (ARRAY['create'::character varying, 'update'::character varying]::text[])", name: "versions_event_known"
+    t.check_constraint "event::text = ANY (ARRAY['create'::character varying::text, 'update'::character varying::text])", name: "versions_event_known"
   end
 
   add_foreign_key "compensations", "employees"
+  add_foreign_key "sessions", "users"
 end

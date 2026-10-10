@@ -41,17 +41,18 @@ How a request flows through the Rails layers. Controllers stay thin: they parse 
 
 ```mermaid
 flowchart TB
-  subgraph Controllers["Controllers (api/v1)"]
-    EC[EmployeesController]
-    CC[CompensationsController]
-    GC["GraphqlController<br/>POST /graphql"]
-    SC[SessionsController]
-    RC[ReferenceController]
+  AUTH["Authentication (concern)<br/>session cookie → Current.user · 401<br/>require_permission → 403 · JSON-only writes"]
+  subgraph Controllers["Controllers"]
+    SC["SessionsController<br/>sign in (rate-limited) · me · sign out"]
+    EC["EmployeesController<br/>HR manager"]
+    UC["UsersController<br/>Admin"]
+    GC["GraphqlController<br/>POST /graphql · any role"]
+    RC[ReferencesController]
   end
   subgraph Domain["Use cases & read paths"]
     DQ["Employees::DirectoryQuery<br/>search · filters · sort allowlist · paginate"]
-    CE["Employees::Create<br/>employee + initial salary (txn)"]
-    RCH["Compensations::RecordChange<br/>lock · validate · close · insert (txn)"]
+    CE["Employees::Create / Update<br/>employee + first salary (txn) · locked fields"]
+    UR["Users::UpdateRoles<br/>never lock out the last admin"]
     GQL["SalaryInsightsSchema<br/>depth 8 · complexity 200 · timeout 5 s"]
     POP["Insights::Population<br/>active + current salary + filters"]
     PSQ["Insights::PayStatsQuery<br/>min/max/avg/exact median per group × currency"]
@@ -61,16 +62,18 @@ flowchart TB
   subgraph Models["Models + DB constraints"]
     EM[Employee]
     CM[Compensation]
-    UM[User]
+    UM["User<br/>roles[] (check constraint)"]
+    SM["Session<br/>token digest · 12 h"]
     REF["Acme::Reference<br/>countries · currencies · departments"]
   end
+  AUTH -. guards .-> Controllers
+  SC --> UM & SM
   EC --> DQ & CE
-  CC --> RCH
+  UC --> UR --> UM
   GC --> GQL --> POP
   POP --> PSQ & DSQ & SUQ
-  SC --> UM
   RC --> REF
-  DQ & CE & RCH & PSQ & DSQ & SUQ --> EM & CM
+  DQ & CE & PSQ & DSQ & SUQ --> EM & CM
   EM & CM -. validate against .-> REF
 ```
 
@@ -80,19 +83,17 @@ Feature-first layout: each module owns its pages, hooks, types and tests.
 
 ```mermaid
 flowchart TB
-  APPSHELL["app/<br/>router · layout · QueryClient · auth guard"]
+  APPSHELL["app/<br/>router · layout (nav by permission, signed-in user) · QueryClient"]
   subgraph modules["src/modules"]
-    DASH["dashboard/<br/>KPI tiles · charts · filter bar"]
-    EMP["employees/<br/>directory · filters · chips · detail · forms"]
-    COMP["compensation/<br/>history list · record-change form"]
-    INS["insights/<br/>API hooks + types for summary/pay/distribution"]
-    AUTH["auth/<br/>login page · useSession"]
+    AUTH["auth/<br/>login page · useSession · RequireAuth(permission) · session-expiry watcher"]
+    DASH["dashboard/<br/>KPI tiles · 6 Highcharts charts · filter bar"]
+    EMP["employees/<br/>directory · filters · chips · profile · create/edit forms"]
+    USERS["users/<br/>Admin: add user · roles multi-select"]
   end
-  SHARED["shared/<br/>apiClient · formatMoney (Intl) · useUrlFilters · ChartCard (chart ⇄ table)"]
-  APPSHELL --> DASH & EMP & AUTH
-  DASH --> INS
-  EMP --> COMP
-  DASH & EMP & COMP & INS & AUTH --> SHARED
+  SHARED["shared/<br/>apiClient · graphqlRequest · formatMoney (Intl) · retry policy"]
+  APPSHELL --> AUTH
+  AUTH -->|guards| DASH & EMP & USERS
+  DASH & EMP & USERS & AUTH --> SHARED
 ```
 
 ## 5. Data model
@@ -122,16 +123,23 @@ erDiagram
     text notes
   }
   VERSION {
-    string item_type "Employee | Compensation"
+    string item_type "Employee | Compensation | User"
     bigint item_id
     string event "create | update"
     jsonb object_changes "field => [old, new]"
     string whodunnit
     datetime created_at "append-only"
   }
+  USER ||--o{ SESSION : "signed-in browsers"
+  USER ||--o{ VERSION : "audit log (roles)"
   USER {
     string email UK
-    string password_digest
+    string password_digest "bcrypt; never logged"
+    string_array roles "viewer | hr_manager | admin (1+)"
+  }
+  SESSION {
+    string token_digest UK "SHA-256 of the cookie token"
+    datetime expires_at "12 h after sign-in"
   }
 ```
 

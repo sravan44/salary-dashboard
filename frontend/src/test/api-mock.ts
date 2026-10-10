@@ -149,7 +149,108 @@ function recordWrite(write: EmployeeWrite) {
   return HttpResponse.json(body, { status })
 }
 
+// ---- Sign-in session -------------------------------------------------------------------
+type Permissions = { view_dashboard: boolean; manage_employees: boolean; manage_users: boolean }
+export type MockUser = { id: number; email: string; roles: string[]; permissions: Permissions }
+
+const user = (id: number, email: string, roles: string[]): MockUser => ({
+  id, email, roles,
+  permissions: { view_dashboard: true, manage_employees: roles.includes('hr_manager'), manage_users: roles.includes('admin') },
+})
+export const hrUser = user(10, 'hr@acme.example', ['hr_manager'])
+export const viewerUser = user(11, 'viewer@acme.example', ['viewer'])
+export const adminUser = user(12, 'admin@acme.example', ['admin'])
+
+/** The password every mock user signs in with. */
+export const MOCK_PASSWORD = 'correct horse battery'
+const knownUsers = [hrUser, viewerUser, adminUser]
+
+// Tests run signed in as an HR manager unless they choose otherwise.
+let signedInUser: MockUser | null = hrUser
+export function signInMockAs(next: MockUser | null) {
+  signedInUser = next
+}
+
+let sessionCheckFails = false
+/** GET /api/v1/session answers 503, as when the server is down. */
+export function failMockSessionCheck() {
+  sessionCheckFails = true
+}
+
+/** When set, every API and GraphQL call answers 401, as after the server-side session expired. */
+let sessionExpired = false
+export function expireMockSession() {
+  sessionExpired = true
+  signedInUser = null
+}
+const unauthorized = () => HttpResponse.json({ error: { code: 'unauthenticated', message: 'Please sign in', details: {} } }, { status: 401 })
+
+// ---- User management (admin) -------------------------------------------------------------
+type UserRow = { id: number; email: string; roles: string[]; created_at: string }
+type UserWrite = { method: 'POST' | 'PATCH'; id?: string; body: Record<string, unknown> }
+export const userWrites: UserWrite[] = []
+const initialUsers = (): UserRow[] => [
+  { id: 12, email: 'admin@acme.example', roles: ['admin'], created_at: '2026-10-01T09:00:00Z' },
+  { id: 13, email: 'priya@acme.example', roles: ['viewer'], created_at: '2026-10-02T09:00:00Z' },
+]
+let userRows = initialUsers()
+let usersListFails = false
+export function failMockUsersList() {
+  usersListFails = true
+}
+let userWriteResponder: (write: UserWrite) => WriteReply | null = () => null
+export function respondToUserWrite(responder: (write: UserWrite) => WriteReply | null) {
+  userWriteResponder = responder
+}
+
+function recordUserWrite(write: UserWrite) {
+  userWrites.push(write)
+  const custom = userWriteResponder(write)
+  if (custom) return HttpResponse.json(custom.body, { status: custom.status ?? 200 })
+
+  const fields = write.body.user as { email?: string; roles: string[] }
+  if (write.method === 'POST') {
+    const row = { id: 100 + userRows.length, email: fields.email!, roles: fields.roles, created_at: '2026-10-10T09:00:00Z' }
+    userRows.push(row)
+    return HttpResponse.json({ data: row }, { status: 201 })
+  }
+  const row = userRows.find((r) => String(r.id) === write.id)!
+  row.roles = fields.roles
+  return HttpResponse.json({ data: row })
+}
+
 export const server = setupServer(
+  // Checked first: an expired session answers 401 everywhere except signing in again.
+  http.all('*', ({ request }) => {
+    const signingIn = request.method === 'POST' && new URL(request.url).pathname === '/api/v1/session'
+    if (sessionExpired && !signingIn) return unauthorized()
+    return undefined
+  }),
+  http.get('*/api/v1/session', () => {
+    if (sessionCheckFails) return HttpResponse.json({ error: { code: 'unavailable', message: 'Service unavailable', details: {} } }, { status: 503 })
+    return signedInUser ? HttpResponse.json({ data: signedInUser }) : unauthorized()
+  }),
+  http.post('*/api/v1/session', async ({ request }) => {
+    const { email, password } = (await request.json()) as { email: string; password: string }
+    const found = knownUsers.find((u) => u.email === email.trim().toLowerCase())
+    if (!found || password !== MOCK_PASSWORD) {
+      return HttpResponse.json({ error: { code: 'invalid_credentials', message: 'Email or password is incorrect', details: {} } }, { status: 401 })
+    }
+    sessionExpired = false
+    signedInUser = found
+    return HttpResponse.json({ data: found }, { status: 201 })
+  }),
+  http.delete('*/api/v1/session', () => {
+    signedInUser = null
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get('*/api/v1/users', () =>
+    usersListFails ? HttpResponse.json({ error: { code: 'server_error', message: 'Could not load users', details: {} } }, { status: 500 }) : HttpResponse.json({ data: userRows }),
+  ),
+  http.post('*/api/v1/users', async ({ request }) => recordUserWrite({ method: 'POST', body: (await request.json()) as Record<string, unknown> })),
+  http.patch('*/api/v1/users/:id', async ({ request, params }) =>
+    recordUserWrite({ method: 'PATCH', id: params.id as string, body: (await request.json()) as Record<string, unknown> }),
+  ),
   http.get('*/api/v1/employees/:id', ({ params }) => {
     const employee = employeeDetails[params.id as string]
     if (!employee) return HttpResponse.json({ error: { code: 'not_found', message: 'Record not found' } }, { status: 404 })
@@ -179,6 +280,13 @@ export const server = setupServer(
 )
 
 export function resetApiMock() {
+  signedInUser = hrUser
+  sessionExpired = false
+  sessionCheckFails = false
+  usersListFails = false
+  userWrites.length = 0
+  userRows = initialUsers()
+  respondToUserWrite(() => null)
   employeeWrites.length = 0
   employeeDetails = initialDetails()
   respondToEmployeeWrite(defaultWriteResponder)
