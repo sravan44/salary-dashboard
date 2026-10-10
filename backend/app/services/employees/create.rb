@@ -43,7 +43,7 @@ module Employees
       salary = @attributes[:salary] || {}
       Employee.new(@attributes.slice(*PROFILE_FIELDS).merge(status: "active")).tap do |employee|
         employee.compensations.build(amount: salary[:amount], currency: salary[:currency],
-                                     effective_from: employee.hire_date, reason: "hire")
+                                     effective_from: employee.hire_date, reason: "hire", revised_by: Current.actor)
       end
     end
 

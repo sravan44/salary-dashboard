@@ -31,3 +31,31 @@ export type EmployeeUpdate = Pick<EmployeeSummary, 'full_name' | 'country_code' 
 export type StatusChange = { status: EmployeeSummary['status'] }
 
 export type EmployeeCreate = EmployeeUpdate & { hire_date: string; salary: Money }
+
+/** One salary record (GET /employees/:id/compensations), newest first. */
+export type SalaryRecord = {
+  id: number
+  amount: string
+  currency: string
+  effective_from: string
+  effective_to: string | null
+  current: boolean
+  reason: string
+  notes: string | null
+  revised_by: string | null
+  /** % change from the record before; null for the first record or when the currency changed. */
+  change_percent: string | null
+}
+
+export type SalaryChange = { amount: string; currency: string; effective_from: string; reason: string; notes: string }
+
+/** One audit entry (GET /employees/:id/versions), newest first. */
+export type AuditEntry = {
+  id: number
+  item_type: 'Employee' | 'Compensation'
+  item_id: number
+  event: 'create' | 'update'
+  changes: Record<string, [unknown, unknown]>
+  whodunnit: string | null
+  created_at: string
+}

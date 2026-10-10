@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { formatMoney } from '../../shared/format-money'
 import { useEmployee, useReferenceData, useUpdateEmployee } from './api'
+import { AuditLog } from './components/audit-log'
+import { SalaryHistory } from './components/salary-history'
 import type { EmployeeDetail } from './types'
 
 export function EmployeePage() {
@@ -54,7 +56,7 @@ export function EmployeePage() {
           <StatusButton employee={e} />
         </Group>
       </Group>
-      <Paper withBorder p="md">
+      <Paper withBorder p="md" component="section" aria-label="Profile">
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           {facts.map(([label, value]) => (
             <div key={label}>
@@ -66,6 +68,8 @@ export function EmployeePage() {
           ))}
         </SimpleGrid>
       </Paper>
+      <SalaryHistory employee={e} />
+      <AuditLog employeeId={e.id} />
     </Stack>
   )
 }

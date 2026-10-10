@@ -219,7 +219,65 @@ function recordUserWrite(write: UserWrite) {
   return HttpResponse.json({ data: row })
 }
 
+// ---- Salary history and audit trail -----------------------------------------------------------
+type SalaryRecord = {
+  id: number; amount: string; currency: string; effective_from: string; effective_to: string | null; current: boolean
+  reason: string; notes: string | null; revised_by: string | null; change_percent: string | null
+}
+const initialHistory = (): Record<string, SalaryRecord[]> => ({
+  '1': [
+    { id: 103, amount: '2400000.00', currency: 'INR', effective_from: '2025-04-01', effective_to: null, current: true, reason: 'promotion', notes: 'Lead role', revised_by: 'hr@acme.example', change_percent: '20.00' },
+    { id: 102, amount: '2000000.00', currency: 'INR', effective_from: '2024-04-01', effective_to: '2025-03-31', current: false, reason: 'annual_review', notes: null, revised_by: 'seed', change_percent: '11.11' },
+    { id: 101, amount: '1800000.00', currency: 'INR', effective_from: '2019-04-01', effective_to: '2024-03-31', current: false, reason: 'hire', notes: null, revised_by: 'seed', change_percent: null },
+  ],
+  '2': [
+    { id: 202, amount: '120000.50', currency: 'USD', effective_from: '2024-01-01', effective_to: null, current: true, reason: 'market_adjustment', notes: null, revised_by: 'seed', change_percent: null },
+    { id: 201, amount: '9000000.00', currency: 'INR', effective_from: '2021-06-01', effective_to: '2023-12-31', current: false, reason: 'hire', notes: null, revised_by: 'seed', change_percent: null },
+  ],
+})
+let salaryHistory = initialHistory()
+export const salaryChanges: { id: string; body: Record<string, unknown> }[] = []
+let salaryChangeResponder: ((body: Record<string, unknown>) => WriteReply) | null = null
+export function respondToSalaryChange(responder: ((body: Record<string, unknown>) => WriteReply) | null) {
+  salaryChangeResponder = responder
+}
+
+let auditTrailFails = false
+export function failMockAuditTrail() {
+  auditTrailFails = true
+}
+export const auditTrail = [
+  { id: 9, item_type: 'Compensation', item_id: 103, event: 'create', changes: { amount: [null, '2400000.00'], currency: [null, 'INR'], reason: [null, 'promotion'] }, whodunnit: 'hr@acme.example', created_at: '2025-04-02T10:15:00Z' },
+  { id: 8, item_type: 'Compensation', item_id: 102, event: 'update', changes: { effective_to: [null, '2025-03-31'] }, whodunnit: 'hr@acme.example', created_at: '2025-04-02T10:15:00Z' },
+  { id: 7, item_type: 'Employee', item_id: 1, event: 'update', changes: { job_title: ['Engineer', 'Software Engineer'] }, whodunnit: 'admin@acme.example', created_at: '2024-11-20T08:00:00Z' },
+]
+
 export const server = setupServer(
+  http.get('*/api/v1/employees/:id/compensations', ({ params }) => HttpResponse.json({ data: salaryHistory[params.id as string] ?? [] })),
+  http.post('*/api/v1/employees/:id/compensations', async ({ request, params }) => {
+    const id = params.id as string
+    const body = (await request.json()) as Record<string, unknown>
+    salaryChanges.push({ id, body })
+    if (salaryChangeResponder) {
+      const { status = 201, body: reply } = salaryChangeResponder(body)
+      return HttpResponse.json(reply, { status })
+    }
+    // Like the server: close the current record the day before, add the new one as current.
+    const change = body.compensation as { amount: string; currency: string; effective_from: string; reason: string; notes?: string }
+    const history = salaryHistory[id]
+    const previous = history[0]
+    const dayBefore = new Date(Date.parse(change.effective_from) - 86_400_000).toISOString().slice(0, 10)
+    history[0] = { ...previous, effective_to: dayBefore, current: false }
+    const amount = Number(change.amount).toFixed(2)
+    const pct = previous.currency === change.currency ? (((Number(amount) - Number(previous.amount)) / Number(previous.amount)) * 100).toFixed(2) : null
+    const record = { id: 999, amount, currency: change.currency, effective_from: change.effective_from, effective_to: null, current: true, reason: change.reason, notes: change.notes || null, revised_by: 'hr@acme.example', change_percent: pct }
+    history.unshift(record)
+    employeeDetails[id] = { ...employeeDetails[id], current_salary: { amount, currency: change.currency } }
+    return HttpResponse.json({ data: record }, { status: 201 })
+  }),
+  http.get('*/api/v1/employees/:id/versions', () =>
+    auditTrailFails ? HttpResponse.json({ error: { code: 'server_error', message: 'Audit log unavailable', details: {} } }, { status: 500 }) : HttpResponse.json({ data: auditTrail }),
+  ),
   // Checked first: an expired session answers 401 everywhere except signing in again.
   http.all('*', ({ request }) => {
     const signingIn = request.method === 'POST' && new URL(request.url).pathname === '/api/v1/session'
@@ -280,6 +338,10 @@ export const server = setupServer(
 )
 
 export function resetApiMock() {
+  salaryHistory = initialHistory()
+  auditTrailFails = false
+  salaryChanges.length = 0
+  respondToSalaryChange(null)
   signedInUser = hrUser
   sessionExpired = false
   sessionCheckFails = false

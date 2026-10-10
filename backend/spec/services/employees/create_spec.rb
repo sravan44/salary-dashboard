@@ -49,6 +49,7 @@ RSpec.describe Employees::Create do
 
     expect(Version.where(item: employee).pluck(:event, :whodunnit)).to eq([ %w[create unauthenticated] ])
     expect(Version.where(item: employee.compensations.sole).pluck(:event)).to eq([ "create" ])
+    expect(employee.compensations.sole.revised_by).to eq("unauthenticated")
   end
 
   describe "validation (nothing is saved when anything is invalid)" do

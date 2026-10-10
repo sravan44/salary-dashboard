@@ -23,9 +23,10 @@ The assessment brief does not settle several business rules. Each one below is a
 | A18 | Who is recorded in the audit log? | The signed-in user's email (since M7). Before login existed, changes were recorded as `unauthenticated`. | — | — |
 | A19 | Can a Viewer infer one person's pay from small groups on the dashboard? | Yes, for now: all aggregates are shown to Viewers (decided by Sravan). A group of one person shows that person's salary. | Pay leaks to Viewers via tiny groups | Before Viewers outside HR get access: hide groups under 5 people |
 | A20 | How do accounts start? | `db:seed` creates demo sign-ins per role with a password documented in the README (Sravan's request); in production only when `DEMO_USER_PASSWORD` is set on purpose. `users:create` for real deployments; Admins add users and set roles in the app. No self sign-up, no password reset or account disabling yet. | A forgotten password needs a console fix | Users ask for self-service |
+| A21 | Can a deactivated employee get a pay change? | No. Reactivate first, so pay history never moves for someone who has left. | A back-dated correction for a leaver needs a reactivation | HR asks for corrections after exit |
 | A13 | Deployment host | Chosen at M8: the lowest-friction host with managed Postgres. A single container where Rails serves the built React app. | Free-tier limits | — |
 
 ## Explicit assessment requirements vs. assumptions vs. optional ideas
 - **Explicit:** one-page requirements; backend plus React UI; relational DB; seed of 10,000; meaningful unit tests; incremental commits; AI artifacts; deployed app; video demo.
-- **Assumed (above):** A1–A20.
+- **Assumed (above):** A1–A21.
 - **Optional / later:** FX (Phase 2), CSV import/export, Kubernetes manifests and future-service templates, audit log of who changed what.

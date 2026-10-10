@@ -9,7 +9,10 @@ Rails.application.routes.draw do
     namespace :v1 do
       resource :session, only: %i[show create destroy]
       resources :users, only: %i[index create update]
-      resources :employees, only: %i[index show create update]
+      resources :employees, only: %i[index show create update] do
+        resources :compensations, only: %i[index create]
+        resources :versions, only: :index
+      end
       resource :reference, only: :show
     end
     match "*path", to: "v1/base#route_not_found", via: :all

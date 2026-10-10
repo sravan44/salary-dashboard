@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { getJson, sendJson } from '../../shared/api-client'
-import type { DirectoryResponse, EmployeeCreate, EmployeeDetail, EmployeeUpdate, ReferenceData, StatusChange } from './types'
+import type { AuditEntry, DirectoryResponse, EmployeeCreate, EmployeeDetail, EmployeeUpdate, ReferenceData, SalaryChange, SalaryRecord, StatusChange } from './types'
 import { isListKey } from './use-directory-filters'
 
 /** The page URL repeats keys (?country=IN&country=US); Rails reads lists as country[]=IN&country[]=US. */
@@ -58,4 +58,32 @@ function refreshAfterSave(queryClient: QueryClient, saved: EmployeeDetail) {
   void queryClient.invalidateQueries({ queryKey: ['employees'] })
   void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] })
   void queryClient.invalidateQueries({ queryKey: ['dashboard-currency-detail'] })
+}
+
+export function useSalaryHistory(id: string) {
+  return useQuery({
+    queryKey: ['salary-history', id],
+    queryFn: async () => (await getJson<{ data: SalaryRecord[] }>(`/api/v1/employees/${id}/compensations`)).data,
+  })
+}
+
+export function useAuditTrail(id: string) {
+  return useQuery({
+    queryKey: ['audit-trail', id],
+    queryFn: async () => (await getJson<{ data: AuditEntry[] }>(`/api/v1/employees/${id}/versions`)).data,
+  })
+}
+
+/** A recorded pay change touches the history, the profile's current salary, the audit log, the directory and the dashboard. */
+export function useRecordSalaryChange(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (compensation: SalaryChange) =>
+      (await sendJson<{ data: SalaryRecord }>('POST', `/api/v1/employees/${id}/compensations`, { compensation })).data,
+    onSuccess: () => {
+      for (const key of [['salary-history', id], ['employee', id], ['audit-trail', id], ['employees'], ['dashboard-overview'], ['dashboard-currency-detail']]) {
+        void queryClient.invalidateQueries({ queryKey: key })
+      }
+    },
+  })
 }
