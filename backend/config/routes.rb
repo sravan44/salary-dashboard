@@ -1,6 +1,10 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
+  post "graphql", to: "graphql#execute"
+  match "graphql", to: "graphql#method_not_allowed", via: %i[get put patch delete]
+  get "graphiql", to: "frontend#graphiql"
+
   namespace :api do
     namespace :v1 do
       resources :employees, only: %i[index show]

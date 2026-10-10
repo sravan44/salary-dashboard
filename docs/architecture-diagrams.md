@@ -23,7 +23,7 @@ The deployable pieces and how they communicate.
 
 ```mermaid
 flowchart LR
-  B["Browser<br/>React 19 + TypeScript SPA<br/>Mantine · TanStack Query · Recharts"]
+  B["Browser<br/>React 19 + TypeScript SPA<br/>Mantine · TanStack Query · Highcharts"]
   subgraph APP["Single app container (production)"]
     direction TB
     STATIC["public/<br/>built SPA assets"]
@@ -44,7 +44,7 @@ flowchart TB
   subgraph Controllers["Controllers (api/v1)"]
     EC[EmployeesController]
     CC[CompensationsController]
-    IC[InsightsController]
+    GC["GraphqlController<br/>POST /graphql"]
     SC[SessionsController]
     RC[ReferenceController]
   end
@@ -52,7 +52,9 @@ flowchart TB
     DQ["Employees::DirectoryQuery<br/>search · filters · sort allowlist · paginate"]
     CE["Employees::Create<br/>employee + initial salary (txn)"]
     RCH["Compensations::RecordChange<br/>lock · validate · close · insert (txn)"]
-    PSQ["Insights::PayStatsQuery<br/>min/max/avg/median per group × currency"]
+    GQL["SalaryInsightsSchema<br/>depth 8 · complexity 200 · timeout 5 s"]
+    POP["Insights::Population<br/>active + current salary + filters"]
+    PSQ["Insights::PayStatsQuery<br/>min/max/avg/exact median per group × currency"]
     DSQ["Insights::DistributionQuery<br/>width_bucket histogram, one currency"]
     SUQ["Insights::SummaryQuery<br/>KPI tiles, headcount by country"]
   end
@@ -64,7 +66,8 @@ flowchart TB
   end
   EC --> DQ & CE
   CC --> RCH
-  IC --> PSQ & DSQ & SUQ
+  GC --> GQL --> POP
+  POP --> PSQ & DSQ & SUQ
   SC --> UM
   RC --> REF
   DQ & CE & RCH & PSQ & DSQ & SUQ --> EM & CM
@@ -170,22 +173,18 @@ sequenceDiagram
   actor HR as HR Manager
   participant UI as Dashboard
   participant URL as URL query string
-  participant API as InsightsController
+  participant API as POST /graphql
   participant DB as PostgreSQL
-  HR->>UI: choose Country = DE, chart currency = EUR
-  UI->>URL: ?country=DE&currency=EUR
-  par same filters to every widget
-    UI->>API: GET /insights/summary?country=DE
-    API->>DB: COUNT … GROUP BY country, currency
-  and
-    UI->>API: GET /insights/distribution?country=DE&currency=EUR
-    API->>DB: width_bucket(amount, min, max, 10) GROUP BY bucket
-  and
-    UI->>API: GET /insights/pay?group_by=department&country=DE&currency=EUR
-    API->>DB: percentile_cont(0.5), min, max, avg GROUP BY department, currency
-  end
+  HR->>UI: choose Country = DE
+  UI->>URL: ?country=DE
+  UI->>API: DashboardOverview(filters: {country: DE})
+  Note over API: depth, complexity, limits and<br/>5 s timeout checked before running
+  API->>DB: counts by country, department, hire year, currency
+  API-->>UI: tiles + headcount charts + currencies in use (EUR)
+  UI->>API: DashboardCurrencyDetail(filters, currency: EUR)
+  API->>DB: WIDTH_BUCKET histogram + ROW_NUMBER exact median, one currency
   API-->>UI: a few dozen aggregate rows (never 10k salaries)
-  UI-->>HR: KPI tiles + 3 charts (each with table view)
+  UI-->>HR: KPI tiles + 6 charts (type switchable, each with a table view)
 ```
 
 ## 8. Build and deployment (one container; host chosen in M9)

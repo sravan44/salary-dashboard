@@ -1,0 +1,85 @@
+## 1. Whole dashboard, filter country=DE, USD-free country so currency EUR
+{
+    "data": {
+        "dashboard": {
+            "headcount": 878,
+            "countriesCount": 1,
+            "currencies": [
+                {
+                    "currency": "EUR",
+                    "headcount": 878
+                }
+            ],
+            "byDept": [
+                {
+                    "group": "Engineering",
+                    "currency": "EUR",
+                    "headcount": 260,
+                    "min": "49300.00",
+                    "max": "163800.00",
+                    "avg": "87800.00",
+                    "median": "82500.00"
+                },
+                {
+                    "group": "Sales",
+                    "currency": "EUR",
+                    "headcount": 170,
+                    "min": "43700.00",
+                    "max": "145700.00",
+                    "avg": "77654.71",
+                    "median": "72850.00"
+                },
+                {
+                    "group": "Customer Support",
+                    "currency": "EUR",
+                    "headcount": 110,
+                    "min": "34300.00",
+                    "max": "118500.00",
+                    "avg": "61991.82",
+                    "median": "57600.00"
+                }
+            ],
+            "distribution": [
+                {
+                    "from": "34300.00",
+                    "to": "60200.00",
+                    "count": 272
+                },
+                {
+                    "from": "60200.00",
+                    "to": "86100.00",
+                    "count": 324
+                },
+                {
+                    "from": "86100.00",
+                    "to": "112000.00",
+                    "count": 165
+                },
+                {
+                    "from": "112000.00",
+                    "to": "137900.00",
+                    "count": 88
+                },
+                {
+                    "from": "137900.00",
+                    "to": "163800.00",
+                    "count": 29
+                }
+            ]
+        }
+    }
+}
+
+## 2. Limits
+$ { dashboard { payStats(groupBy: COUNTRY, limit: 101) { group } } }
+  -> limit must be between 1 and 100
+$ { dashboard { distribution(currency: USD, buckets: 30) { count } } }
+  -> buckets must be between 5 and 20
+$ { dashboard { a: payStats(groupBy: COUNTRY, limit: 100){group} b: payStats(groupBy: DEPARTMENT, limit: 100){group} c: payStats(groupBy: JOB_TITLE, limit: 100){group} } }
+  -> Query has complexity of 301, which exceeds max complexity of 200
+$ { __schema { types { fields { type { ofType { ofType { ofType { ofType { name } } } } } } } } }
+  -> Query has depth of 9, which exceeds max depth of 8
+$ { dashboard(filters: {country: XX}) { headcount } }
+  -> Argument 'country' on InputObject 'DashboardFilters' has an invalid value (XX). Expected type 'CountryCodeEnum'.
+$ { dashboard { distribution { count } } }
+  -> Field 'distribution' is missing required arguments: currency

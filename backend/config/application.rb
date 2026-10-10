@@ -44,5 +44,10 @@ module SalaryInsights
     # The built React app's entry page (see FrontendController). Kept outside public/ so it is
     # never served with the long-lived cache headers used for hashed assets.
     config.x.frontend_index = Rails.root.join(ENV.fetch("FRONTEND_INDEX", "frontend/index.html"))
+    config.x.frontend_graphiql = Rails.root.join(ENV.fetch("FRONTEND_GRAPHIQL", "frontend/graphiql.html"))
+
+    # GraphiQL (/graphiql) and GraphQL schema browsing: on for local/dev, off for real deployments
+    # unless GRAPHIQL_ENABLED=true.
+    config.x.graphiql_enabled = ENV.fetch("GRAPHIQL_ENABLED") { Rails.env.local?.to_s } == "true"
   end
 end

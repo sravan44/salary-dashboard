@@ -40,7 +40,7 @@ COPY --from=gems /app /app
 # Hashed assets are served from public/ with long-lived caching; index.html is served by
 # FrontendController with "no-cache", so it lives outside public/.
 COPY --from=frontend /frontend/dist/assets /app/public/assets
-COPY --from=frontend /frontend/dist/index.html /app/frontend/index.html
+COPY --from=frontend /frontend/dist/index.html /frontend/dist/graphiql.html /app/frontend/
 
 RUN useradd --create-home --shell /bin/bash rails && \
     mkdir -p log tmp && chown -R rails:rails log tmp

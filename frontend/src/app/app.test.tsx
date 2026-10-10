@@ -12,10 +12,10 @@ describe('App shell', () => {
     expect(nav).toHaveTextContent('Employees')
   })
 
-  it('opens the dashboard by default', () => {
+  it('opens the dashboard by default', async () => {
     renderApp()
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
   it('navigates to the employees page from the menu', async () => {
@@ -26,9 +26,9 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: 'Employees' })).toBeInTheDocument()
   })
 
-  it('redirects unknown paths to the dashboard', () => {
+  it('redirects unknown paths to the dashboard', async () => {
     renderApp('/does-not-exist')
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
   })
 })

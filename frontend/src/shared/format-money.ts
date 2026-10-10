@@ -11,3 +11,15 @@ export function formatMoney(amount: string, currency: string): string {
     maximumFractionDigits: 2,
   }).format(Number(amount))
 }
+
+/** Short axis labels such as "$40K" or "₹2.4M", in the amount's own currency. */
+export function formatMoneyCompact(amount: number, currency: string): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'symbol',
+    notation: 'compact',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(amount)
+}

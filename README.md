@@ -6,8 +6,8 @@ Salary management for an HR Manager overseeing 10,000 employees across multiple 
 
 | Part | Stack |
 |------|-------|
-| `backend/` | Ruby 3.3.6, Rails 8.1 (API mode), PostgreSQL 16, RSpec, SimpleCov, RuboCop, Brakeman, bundler-audit |
-| `frontend/` | React 19 + TypeScript, Vite, Mantine, React Router, Vitest + React Testing Library |
+| `backend/` | Ruby 3.3.6, Rails 8.1 (API mode), graphql-ruby, PostgreSQL 16, RSpec, SimpleCov, RuboCop, Brakeman, bundler-audit |
+| `frontend/` | React 19 + TypeScript, Vite, Mantine, React Router, TanStack Query, Highcharts, GraphiQL, Vitest + React Testing Library |
 
 ## Run with Docker (recommended)
 
@@ -17,7 +17,8 @@ One container runs the whole app: Rails serves the API **and** the built React a
 docker compose up --build    # no setup needed; builds the image, starts db + app, seeds 10,000 employees on first start
 ```
 Local defaults (database password, secret key) live in `compose.yaml` and suit local use only; a `.env` file can override them.
-- App: http://localhost:3000 · Health: http://localhost:3000/up · API: http://localhost:3000/api/v1/employees
+- App: http://localhost:3000 · Health: http://localhost:3000/up · REST: http://localhost:3000/api/v1/employees
+- GraphQL: `POST http://localhost:3000/graphql` · GraphiQL explorer: http://localhost:3000/graphiql (enabled locally via `GRAPHIQL_ENABLED`)
 
 Build the image on its own with `docker build -t salary-insights .`. It runs in production mode; set `DATABASE_URL` (or `DB_*`) and `SECRET_KEY_BASE`. Leave `FORCE_SSL` at its default (`true`) behind an HTTPS proxy.
 

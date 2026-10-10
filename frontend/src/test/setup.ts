@@ -34,3 +34,12 @@ class ResizeObserverStub {
 }
 window.ResizeObserver = ResizeObserverStub
 window.HTMLElement.prototype.scrollIntoView = () => {}
+
+// jsdom lacks these browser APIs; Highcharts uses them for feature detection and SVG text measurement.
+if (!window.CSS?.supports) {
+  Object.defineProperty(window, 'CSS', { value: { ...window.CSS, supports: () => false }, writable: true })
+}
+const svgProto = window.SVGElement.prototype as SVGElement & { getBBox?: () => DOMRect }
+if (!svgProto.getBBox) {
+  svgProto.getBBox = () => ({ x: 0, y: 0, width: 40, height: 12 }) as DOMRect
+}

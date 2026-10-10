@@ -1,4 +1,4 @@
-import { formatMoney } from './format-money'
+import { formatMoney, formatMoneyCompact } from './format-money'
 
 describe('formatMoney', () => {
   it('formats an amount in its own currency, hiding .00', () => {
@@ -17,5 +17,13 @@ describe('formatMoney', () => {
 
   it('keeps cents when they exist', () => {
     expect(formatMoney('120000.50', 'USD')).toBe('$120,000.50')
+  })
+})
+
+describe('formatMoneyCompact', () => {
+  it('shortens large amounts for chart axes, keeping the currency', () => {
+    expect(formatMoneyCompact(40000, 'USD')).toBe('$40K')
+    expect(formatMoneyCompact(2400000, 'INR')).toBe('₹2.4M')
+    expect(formatMoneyCompact(95600, 'CAD')).toBe('CA$95.6K')
   })
 })

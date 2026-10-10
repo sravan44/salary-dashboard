@@ -1,0 +1,225 @@
+type Country {
+  code: CountryCode!
+  currency: Currency!
+  name: String!
+}
+
+"""
+Supported country (ISO-3166 alpha-2)
+"""
+enum CountryCode {
+  """
+  Australia
+  """
+  AU
+
+  """
+  Canada
+  """
+  CA
+
+  """
+  Germany
+  """
+  DE
+
+  """
+  France
+  """
+  FR
+
+  """
+  United Kingdom
+  """
+  GB
+
+  """
+  India
+  """
+  IN
+
+  """
+  Singapore
+  """
+  SG
+
+  """
+  United States
+  """
+  US
+}
+
+type CountryHeadcount {
+  countryCode: CountryCode!
+  countryName: String!
+  headcount: Int!
+}
+
+"""
+Supported currency (ISO-4217)
+"""
+enum Currency {
+  AUD
+  CAD
+  EUR
+  GBP
+  INR
+  SGD
+  USD
+}
+
+type CurrencyHeadcount {
+  currency: Currency!
+  headcount: Int!
+}
+
+type Dashboard {
+  countriesCount: Int!
+
+  """
+  Headcount per currency (never a combined amount)
+  """
+  currencies: [CurrencyHeadcount!]!
+
+  """
+  Salary histogram for one currency
+  """
+  distribution(buckets: Int = 10, currency: Currency!): [SalaryBucket!]!
+
+  """
+  Active employees
+  """
+  headcount: Int!
+  headcountByCountry: [CountryHeadcount!]!
+  headcountByDepartment: [DepartmentHeadcount!]!
+
+  """
+  Current employees by hire year, oldest first
+  """
+  hiresByYear: [YearHeadcount!]!
+  payStats(
+    """
+    Only this currency (for single-currency charts)
+    """
+    currency: Currency
+    groupBy: PayGroupBy!
+    limit: Int = 50
+  ): [PayStat!]!
+}
+
+"""
+Narrow every dashboard widget to the same employees (active employees only)
+"""
+input DashboardFilters {
+  country: CountryCode
+  department: Department
+  jobTitle: String
+}
+
+"""
+Department; the value is the department name (e.g. CUSTOMER_SUPPORT is "Customer Support")
+"""
+enum Department {
+  """
+  Customer Support
+  """
+  CUSTOMER_SUPPORT
+
+  """
+  Engineering
+  """
+  ENGINEERING
+
+  """
+  Finance
+  """
+  FINANCE
+
+  """
+  Marketing
+  """
+  MARKETING
+
+  """
+  Operations
+  """
+  OPERATIONS
+
+  """
+  People
+  """
+  PEOPLE
+
+  """
+  Product
+  """
+  PRODUCT
+
+  """
+  Sales
+  """
+  SALES
+}
+
+type DepartmentHeadcount {
+  department: String!
+  headcount: Int!
+}
+
+"""
+How to group salary statistics
+"""
+enum PayGroupBy {
+  COUNTRY
+  DEPARTMENT
+  JOB_TITLE
+}
+
+"""
+Salary statistics for one group in ONE currency. Amounts are exact decimal strings.
+"""
+type PayStat {
+  """
+  Mean, rounded to 2 decimals (half up)
+  """
+  avg: String!
+  currency: Currency!
+  group: String!
+  headcount: Int!
+  max: String!
+
+  """
+  Exact median; mean of the two middle values for an even count
+  """
+  median: String!
+  min: String!
+}
+
+type Query {
+  """
+  Pay insights for active employees
+  """
+  dashboard(filters: DashboardFilters): Dashboard!
+  reference: Reference!
+}
+
+"""
+Values for filter dropdowns and currency choices
+"""
+type Reference {
+  countries: [Country!]!
+  currencies: [Currency!]!
+  departments: [String!]!
+  jobTitles: [String!]!
+}
+
+type SalaryBucket {
+  count: Int!
+  from: String!
+  to: String!
+}
+
+type YearHeadcount {
+  headcount: Int!
+  year: Int!
+}

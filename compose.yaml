@@ -26,6 +26,7 @@ services:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-local-compose-only-not-a-production-secret}
       FORCE_SSL: "false" # plain http on localhost; real hosts terminate TLS and keep the default (true)
       AUTO_SEED: "true"  # seed demo data on first start; an existing database is never touched
+      GRAPHIQL_ENABLED: "true"  # GraphiQL at http://localhost:3000/graphiql; off by default in real deployments
     ports:
       - "3000:3000"
     depends_on:
