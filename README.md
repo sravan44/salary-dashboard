@@ -11,14 +11,17 @@ Salary management for an HR Manager overseeing 10,000 employees across multiple 
 
 ## Run with Docker (recommended)
 
-```bash
-cp .env.example .env          # then set POSTGRES_PASSWORD
-docker compose up --build
-```
-- UI: http://localhost:5173 (calls to `/api` are proxied to the backend)
-- API health: http://localhost:3000/up
+One container runs the whole app: Rails serves the API **and** the built React app at http://localhost:3000. A second container runs PostgreSQL.
 
-## Run natively
+```bash
+docker compose up --build    # no setup needed; builds the image, starts db + app, seeds 10,000 employees on first start
+```
+Local defaults (database password, secret key) live in `compose.yaml` and suit local use only; a `.env` file can override them.
+- App: http://localhost:3000 · Health: http://localhost:3000/up · API: http://localhost:3000/api/v1/employees
+
+Build the image on its own with `docker build -t salary-insights .`. It runs in production mode; set `DATABASE_URL` (or `DB_*`) and `SECRET_KEY_BASE`. Leave `FORCE_SSL` at its default (`true`) behind an HTTPS proxy.
+
+## Run natively (development, with hot reload)
 
 Prerequisites: Ruby 3.3.6 (rbenv reads `backend/.ruby-version`), Node 22, PostgreSQL 16 running locally.
 
@@ -43,7 +46,7 @@ cd backend
 bin/rails db:seed                     # exactly 10,000 synthetic employees, random seed 42
 SEED_EMPLOYEES=500 SEED_RANDOM=7 bin/rails db:seed
 ```
-Re-running replaces all employees and salary history, and the same seed always gives identical data. In production it refuses unless `SEED_REPLACE=1`.
+Re-running replaces all employees and salary history, and the same seed always gives identical data. In production it only replaces existing employees with `SEED_REPLACE=1`; `bin/rails app:seed_if_empty` (with `AUTO_SEED=true`) seeds only an empty database.
 
 ## Tests and quality checks
 

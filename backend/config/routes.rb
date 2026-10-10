@@ -6,5 +6,10 @@ Rails.application.routes.draw do
       resources :employees, only: %i[index show]
       resource :reference, only: :show
     end
+    match "*path", to: "v1/base#route_not_found", via: :all
   end
+
+  # Everything else is a client-side route of the React app, except paths that look like files.
+  root "frontend#show"
+  get "*path", to: "frontend#show", constraints: ->(request) { File.extname(request.path).empty? }
 end

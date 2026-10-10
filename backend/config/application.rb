@@ -40,5 +40,9 @@ module SalaryInsights
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # The built React app's entry page (see FrontendController). Kept outside public/ so it is
+    # never served with the long-lived cache headers used for hashed assets.
+    config.x.frontend_index = Rails.root.join(ENV.fetch("FRONTEND_INDEX", "frontend/index.html"))
   end
 end

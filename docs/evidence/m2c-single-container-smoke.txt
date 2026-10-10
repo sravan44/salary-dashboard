@@ -1,0 +1,42 @@
+Rails 8.1.4 in RAILS_ENV=production, FORCE_SSL=false, serving the built React app + API from ONE process on :3000 (same layout as the Docker image)
+
+$ curl -i 'http://localhost:3000/up'
+HTTP/1.1 200 OK
+content-type: text/html; charset=utf-8
+cache-control: max-age=0, private, must-revalidate
+<!DOCTYPE html><html><body style="background-color: green"></body></html>
+
+$ curl -i 'http://localhost:3000/'
+HTTP/1.1 200 OK
+cache-control: no-cache
+content-type: text/html
+<!doctype html> <html lang="en">   <head>     <meta charset="UTF-8" />     <meta name="viewport" content="width=device-width, initial-scale=1.0" />     <title>A
+
+$ curl -i 'http://localhost:3000/employees?country=IN&page=2'
+HTTP/1.1 200 OK
+cache-control: no-cache
+content-type: text/html
+<!doctype html> <html lang="en">   <head>     <meta charset="UTF-8" />     <meta name="viewport" content="width=device-width, initial-scale=1.0" />     <title>A
+
+$ curl -i 'http://localhost:3000/assets/index-fTh4ZApF.js'
+HTTP/1.1 200 OK
+content-type: text/javascript
+cache-control: public, max-age=31556952
+var F2=Object.defineProperty;var t0=a=>{throw TypeError(a)};var I2=(a,i,r)=>i in a?F2(a,i,{enumerable:!0,configurable:!0,writable:!0,value:r}):a[i]=r;var Cs=(a,
+
+$ curl -i 'http://localhost:3000/assets/missing-abc123.js'
+HTTP/1.1 404 Not Found
+content-type: text/html; charset=UTF-8
+
+
+$ curl -i 'http://localhost:3000/api/v1/employees?per_page=1'
+HTTP/1.1 200 OK
+content-type: application/json; charset=utf-8
+cache-control: max-age=0, private, must-revalidate
+{"data":[{"id":449,"employee_number":"EMP-000449","full_name":"Aarav Becker","country_code":"US","department":"Engineering","job_title":"Senior Software Enginee
+
+$ curl -i 'http://localhost:3000/api/v1/does-not-exist'
+HTTP/1.1 404 Not Found
+content-type: application/json; charset=utf-8
+cache-control: no-cache
+{"error":{"code":"not_found","message":"No such API endpoint","details":{}}}

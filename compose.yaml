@@ -1,12 +1,14 @@
-# Local development stack: `docker compose up --build`
-# - Postgres is reachable only on the compose network (no host port).
-# - Backend waits for a healthy database; frontend waits for a healthy backend.
+# Run the whole product locally: `docker compose up --build`, then open http://localhost:3000
+# - app: one container (Rails API + built React app on the same origin)
+# - db:  PostgreSQL, reachable only on the compose network (no host port)
+# Works with no setup: the defaults below are for local use only. A .env file can override them.
+# The app seeds 10,000 demo employees automatically the first time (empty database only).
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -15,39 +17,19 @@ services:
       timeout: 3s
       retries: 10
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
+  app:
+    build: .
     environment:
       DB_HOST: db
       DB_USER: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-local-compose-only-not-a-production-secret}
+      FORCE_SSL: "false" # plain http on localhost; real hosts terminate TLS and keep the default (true)
+      AUTO_SEED: "true"  # seed demo data on first start; an existing database is never touched
     ports:
       - "3000:3000"
-    volumes:
-      - ./backend:/app
     depends_on:
       db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:3000/up"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    environment:
-      API_PROXY_TARGET: http://backend:3000
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend/src:/app/src
-    depends_on:
-      backend:
         condition: service_healthy
 
 volumes:

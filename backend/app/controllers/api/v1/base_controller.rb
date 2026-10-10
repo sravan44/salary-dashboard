@@ -11,6 +11,10 @@ module Api
         render_error(:bad_request, "invalid_parameters", "Some query parameters are invalid", error.details)
       end
 
+      def route_not_found
+        render_error(:not_found, "not_found", "No such API endpoint")
+      end
+
       private
 
       def render_error(status, code, message, details = {})

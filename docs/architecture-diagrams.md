@@ -188,24 +188,32 @@ sequenceDiagram
   UI-->>HR: KPI tiles + 3 charts (each with table view)
 ```
 
-## 8. Deployment *(planned; host chosen in M9)*
+## 8. Build and deployment (one container; host chosen in M9)
 
 ```mermaid
 flowchart LR
-  subgraph DEV["Local development (compose.yaml)"]
+  subgraph BUILD["Dockerfile (multi-stage)"]
     direction TB
-    FE["frontend<br/>Vite dev server :5173<br/>proxy /api → backend"]
-    BE["backend<br/>rails s :3000"]
-    PG[("postgres:16<br/>internal network only")]
-    FE --> BE --> PG
+    S1["1 · node:22-slim<br/>npm ci + npm run build"]
+    S2["2 · ruby:3.3.6-slim<br/>bundle install (no dev/test)"]
+    S3["3 · runtime<br/>Rails + public/assets + frontend/index.html<br/>non-root user, HEALTHCHECK /up"]
+    S1 -->|dist/assets, index.html| S3
+    S2 -->|gems + app| S3
+  end
+  subgraph LOCAL["docker compose up (http://localhost:3000)"]
+    direction TB
+    APP["app<br/>one container :3000<br/>/ → React app · /api/v1 → JSON"]
+    PG[("db: postgres:16<br/>internal network only")]
+    APP --> PG
   end
   subgraph PROD["Production (host TBD at M9)"]
     direction TB
-    IMG["One Docker image<br/>stage 1: npm run build<br/>stage 2: Rails + public/ SPA"]
+    IMG["same image<br/>FORCE_SSL=true behind TLS proxy"]
     MPG[("Managed PostgreSQL")]
     IMG -->|DATABASE_URL secret| MPG
   end
-  GIT["GitHub repo<br/>sravan44/salary-dashboard"] -->|build| IMG
+  S3 --> APP
+  S3 --> IMG
 ```
 
 ## 9. Seed data flow

@@ -19,8 +19,9 @@ flowchart LR
 | `frontend/` | Directory (search and filters), employee detail, salary form, insights dashboard | React 19 + TypeScript (Vite), Mantine components, TanStack Query for server state, **Recharts** for charts. Filter state is kept in the URL query string. |
 | `backend/` | Validation, business rules, REST API, auth | Rails 8.1 API mode, thin controllers |
 | Database | Integrity, filtering, aggregation | PostgreSQL 16 (median via `percentile_cont`) |
-| Dev setup | Reproducible environment | Root `compose.yaml` (db + backend + frontend) |
-| Production | One deployable unit | Multi-stage Dockerfile: the React build is copied into Rails `public/` → **same origin, no CORS, cookie session** |
+| Run locally (Docker) | Reproducible environment | Root `compose.yaml`: `db` + one `app` container, http://localhost:3000 |
+| Production | One deployable unit | Root multi-stage `Dockerfile`: Node builds the React app; Rails serves `/api` **and** the app on one origin (hashed `/assets` cached for a year, `index.html` via `FrontendController` with `no-cache`) → **same origin, no CORS, cookie session** |
+| Day-to-day development | Hot reload | Native `bin/rails s` (:3000) + `npm run dev` (:5173, proxies `/api`) |
 
 ## Backend structure (Rails conventions)
 - **Models:** persistence and local invariants (`Employee`, `Compensation`), backed by DB constraints.

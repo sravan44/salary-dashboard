@@ -9,4 +9,8 @@ backend/log/*
 backend/tmp/*
 backend/vendor/bundle
 backend/config/master.key
+backend/frontend
+backend/public/assets
+backend/coverage
+**/.env
 docs

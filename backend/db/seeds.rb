@@ -2,8 +2,9 @@
 #   SEED_EMPLOYEES  number of employees (default 10,000)
 #   SEED_RANDOM     random seed (default 42); the same value always yields identical data
 # Re-running REPLACES all employees and salary history (see Seeds::EmployeeSeeder).
-if Rails.env.production? && ENV["SEED_REPLACE"] != "1"
-  abort "Refusing to replace employee data in production. Set SEED_REPLACE=1 to confirm."
+# In production, replacing existing employees needs SEED_REPLACE=1; an empty database is seeded freely.
+if Rails.env.production? && Employee.exists? && ENV["SEED_REPLACE"] != "1"
+  abort "Refusing to replace #{Employee.count} existing employees in production. Set SEED_REPLACE=1 to confirm."
 end
 
 count = Integer(ENV.fetch("SEED_EMPLOYEES", "10000"))

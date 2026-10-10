@@ -12,6 +12,9 @@ backend/tmp/*
 !backend/tmp/.keep
 backend/storage/*
 backend/coverage/
+# Built React app copied in for production-mode runs (the Docker image builds its own)
+backend/frontend/
+backend/public/assets/
 backend/vendor/bundle/
 backend/.bundle/
 
