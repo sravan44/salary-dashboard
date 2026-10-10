@@ -23,6 +23,8 @@ flowchart LR
 | Production | One deployable unit | Root multi-stage `Dockerfile`: Node builds the React app; Rails serves `/api` **and** the app on one origin (hashed `/assets` cached for a year, `index.html` via `FrontendController` with `no-cache`) → **same origin, no CORS, cookie session** |
 | Day-to-day development | Hot reload | Native `bin/rails s` (:3000) + `npm run dev` (:5173, proxies `/api`) |
 
+Earlier three-container setup (M1), kept for reference: [`examples/before-single-container/`](examples/before-single-container/README.md).
+
 ## Backend structure (Rails conventions)
 - **Models:** persistence and local invariants (`Employee`, `Compensation`), backed by DB constraints.
 - **Services:** explicit multi-step use cases, e.g. `Compensations::RecordChange` (transaction + row lock).
