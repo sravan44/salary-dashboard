@@ -3,7 +3,7 @@
 Base path: `/api/v1`. JSON only. Every endpoint except `POST /session` and `GET /up` requires an authenticated session (401 otherwise, from M7).
 
 **Error shape:** `{ "error": { "code": "validation_failed", "message": "...", "details": { "field": ["msg"] } } }`
-Status codes: 400 for invalid query params, 404 when not found, 422 for validation failures.
+Status codes: 400 for invalid query params (`code: invalid_parameters`, every problem listed in `details`), 404 when not found (`not_found`), 422 for validation failures.
 
 ## Employees
 `GET /employees`
@@ -14,16 +14,16 @@ Status codes: 400 for invalid query params, 404 when not found, 422 for validati
 | `country`, `department`, `job_title`, `status` | Exact match. Filters combine with AND. An unknown value for an enum-like filter (country, department, status) returns 400. |
 | `min_salary`, `max_salary` | Decimal ≥ 0, applied to the current salary. Must be used together with `currency` (otherwise 400), because a range across currencies is meaningless. |
 | `currency` | Supported ISO-4217 code (filters on the current salary's currency) |
-| `sort` | Allowlist: `full_name`, `employee_number`, `hire_date`, `salary`. Prefix `-` for descending. Default `full_name`. |
+| `sort` | Allowlist: `full_name`, `employee_number`, `hire_date`, `salary`. Prefix `-` for descending. Default `full_name`. Sorting by `salary` requires `currency` (otherwise 400). Ties are broken by id, so pages are stable. |
 | `page` | Integer ≥ 1, default 1 |
-| `per_page` | 1–100, default 25 |
+| `per_page` | 1–100, default 25. A page past the end returns `data: []` with the real `total`. |
 
 Response: `{ "data": [EmployeeSummary], "meta": { "page", "per_page", "total", "total_pages" } }`
-`EmployeeSummary` = id, employee_number, full_name, country_code, department, job_title, status, current_salary `{ amount: "120000.00", currency: "USD" }`
+`EmployeeSummary` = id, employee_number, full_name, country_code, department, job_title, status, hire_date, current_salary `{ amount: "120000.00", currency: "USD" }`
 
 Amounts are serialized as **strings** to avoid float precision loss.
 
-- `GET /employees/:id`: summary + email + hire_date
+- `GET /employees/:id`: summary + email
 - `POST /employees`: create, with the initial salary (amount, currency, effective_from = hire_date)
 - `PATCH /employees/:id`: edit profile fields and status (salary is never changed here)
 
@@ -48,4 +48,4 @@ One row per **(group, currency)**. Covers active employees and their current sal
 `POST /session` `{ email, password }` · `DELETE /session` · `GET /session` (current user)
 
 ## Reference
-`GET /reference`: supported countries (with default currency), currencies, departments. Feeds the UI dropdowns.
+`GET /reference` → `{ data: { countries: [{code, name, currency}], currencies, departments, statuses, job_titles } }`. Feeds the UI dropdowns; `job_titles` are the distinct titles in use.

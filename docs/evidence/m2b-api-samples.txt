@@ -1,0 +1,324 @@
+$ curl '/api/v1/employees?per_page=3'
+{
+ "data": [
+  {
+   "id": 20449,
+   "employee_number": "EMP-000449",
+   "full_name": "Aarav Becker",
+   "country_code": "US",
+   "department": "Engineering",
+   "job_title": "Senior Software Engineer",
+   "status": "active",
+   "hire_date": "2022-11-03",
+   "current_salary": {
+    "amount": "143300.00",
+    "currency": "USD"
+   }
+  },
+  {
+   "id": 24665,
+   "employee_number": "EMP-004665",
+   "full_name": "Aarav Becker",
+   "country_code": "FR",
+   "department": "Finance",
+   "job_title": "Finance Associate",
+   "status": "active",
+   "hire_date": "2016-12-14",
+   "current_salary": {
+    "amount": "47700.00",
+    "currency": "EUR"
+   }
+  },
+  {
+   "id": 26577,
+   "employee_number": "EMP-006577",
+   "full_name": "Aarav Becker",
+   "country_code": "DE",
+   "department": "Engineering",
+   "job_title": "Engineering Manager",
+   "status": "active",
+   "hire_date": "2023-03-29",
+   "current_salary": {
+    "amount": "135300.00",
+    "currency": "EUR"
+   }
+  }
+ ],
+ "meta": {
+  "page": 1,
+  "per_page": 3,
+  "total": 10000,
+  "total_pages": 3334
+ }
+}
+[HTTP 200, 0.083231s]
+
+
+$ curl '/api/v1/employees?q=rao&country=IN&department=Engineering&per_page=3'
+{
+ "data": [
+  {
+   "id": 20266,
+   "employee_number": "EMP-000266",
+   "full_name": "Aarav Rao",
+   "country_code": "IN",
+   "department": "Engineering",
+   "job_title": "Software Engineer",
+   "status": "terminated",
+   "hire_date": "2023-11-17",
+   "current_salary": {
+    "amount": "1335500.00",
+    "currency": "INR"
+   }
+  },
+  {
+   "id": 23664,
+   "employee_number": "EMP-003664",
+   "full_name": "Aarav Rao",
+   "country_code": "IN",
+   "department": "Engineering",
+   "job_title": "Senior Software Engineer",
+   "status": "terminated",
+   "hire_date": "2020-01-01",
+   "current_salary": {
+    "amount": "1610200.00",
+    "currency": "INR"
+   }
+  },
+  {
+   "id": 21400,
+   "employee_number": "EMP-001400",
+   "full_name": "Arjun Rao",
+   "country_code": "IN",
+   "department": "Engineering",
+   "job_title": "Senior Software Engineer",
+   "status": "active",
+   "hire_date": "2016-04-16",
+   "current_salary": {
+    "amount": "1585800.00",
+    "currency": "INR"
+   }
+  }
+ ],
+ "meta": {
+  "page": 1,
+  "per_page": 3,
+  "total": 23,
+  "total_pages": 8
+ }
+}
+[HTTP 200, 0.014342s]
+
+
+$ curl '/api/v1/employees?currency=EUR&min_salary=100000&max_salary=120000&sort=-salary&per_page=3'
+{
+ "data": [
+  {
+   "id": 27852,
+   "employee_number": "EMP-007852",
+   "full_name": "Yuki Iyer",
+   "country_code": "DE",
+   "department": "People",
+   "job_title": "People Lead",
+   "status": "active",
+   "hire_date": "2024-06-06",
+   "current_salary": {
+    "amount": "119900.00",
+    "currency": "EUR"
+   }
+  },
+  {
+   "id": 23721,
+   "employee_number": "EMP-003721",
+   "full_name": "Meera Clarke",
+   "country_code": "DE",
+   "department": "Product",
+   "job_title": "Principal Product Manager",
+   "status": "active",
+   "hire_date": "2024-07-16",
+   "current_salary": {
+    "amount": "119700.00",
+    "currency": "EUR"
+   }
+  },
+  {
+   "id": 26704,
+   "employee_number": "EMP-006704",
+   "full_name": "Chloe Davies",
+   "country_code": "DE",
+   "department": "Sales",
+   "job_title": "Sales Director",
+   "status": "active",
+   "hire_date": "2019-08-29",
+   "current_salary": {
+    "amount": "119700.00",
+    "currency": "EUR"
+   }
+  }
+ ],
+ "meta": {
+  "page": 1,
+  "per_page": 3,
+  "total": 143,
+  "total_pages": 48
+ }
+}
+[HTTP 200, 0.020520s]
+
+
+$ curl '/api/v1/employees?status=terminated&per_page=2&page=3&sort=-hire_date'
+{
+ "data": [
+  {
+   "id": 20793,
+   "employee_number": "EMP-000793",
+   "full_name": "Kavya Reddy",
+   "country_code": "US",
+   "department": "Operations",
+   "job_title": "Operations Analyst",
+   "status": "terminated",
+   "hire_date": "2026-08-21",
+   "current_salary": {
+    "amount": "83200.00",
+    "currency": "USD"
+   }
+  },
+  {
+   "id": 23497,
+   "employee_number": "EMP-003497",
+   "full_name": "Noah Patel",
+   "country_code": "DE",
+   "department": "Sales",
+   "job_title": "Sales Lead",
+   "status": "terminated",
+   "hire_date": "2026-08-18",
+   "current_salary": {
+    "amount": "116400.00",
+    "currency": "EUR"
+   }
+  }
+ ],
+ "meta": {
+  "page": 3,
+  "per_page": 2,
+  "total": 773,
+  "total_pages": 387
+ }
+}
+[HTTP 200, 0.019082s]
+
+
+$ curl '/api/v1/employees?q=EMP-000042'
+{
+ "data": [
+  {
+   "id": 20042,
+   "employee_number": "EMP-000042",
+   "full_name": "Priya Brown",
+   "country_code": "US",
+   "department": "Customer Support",
+   "job_title": "Support Specialist",
+   "status": "active",
+   "hire_date": "2016-06-13",
+   "current_salary": {
+    "amount": "79000.00",
+    "currency": "USD"
+   }
+  }
+ ],
+ "meta": {
+  "page": 1,
+  "per_page": 25,
+  "total": 1,
+  "total_pages": 1
+ }
+}
+[HTTP 200, 0.042191s]
+
+
+$ curl '/api/v1/employees?country=SG&department=People&job_title=Head%20of%20People&status=terminated'
+{
+ "data": [],
+ "meta": {
+  "page": 1,
+  "per_page": 25,
+  "total": 0,
+  "total_pages": 0
+ }
+}
+[HTTP 200, 0.019623s]
+
+
+$ curl '/api/v1/employees?per_page=5&page=9999'
+{
+ "data": [],
+ "meta": {
+  "page": 9999,
+  "per_page": 5,
+  "total": 10000,
+  "total_pages": 2000
+ }
+}
+[HTTP 200, 0.040986s]
+
+
+$ curl '/api/v1/employees?min_salary=50000'
+{
+ "error": {
+  "code": "invalid_parameters",
+  "message": "Some query parameters are invalid",
+  "details": {
+   "currency": [
+    "is required when filtering by salary"
+   ]
+  }
+ }
+}
+[HTTP 400, 0.002735s]
+
+
+$ curl '/api/v1/employees?sort=salary'
+{
+ "error": {
+  "code": "invalid_parameters",
+  "message": "Some query parameters are invalid",
+  "details": {
+   "sort": [
+    "by salary requires a currency filter"
+   ]
+  }
+ }
+}
+[HTTP 400, 0.003119s]
+
+
+$ curl '/api/v1/employees?sort=password&page=0&country=XX'
+{
+ "error": {
+  "code": "invalid_parameters",
+  "message": "Some query parameters are invalid",
+  "details": {
+   "country": [
+    "must be one of: US, IN, GB, DE, FR, CA, AU, SG"
+   ],
+   "page": [
+    "must be an integer of at least 1"
+   ],
+   "sort": [
+    "must be one of: full_name, -full_name, employee_number, -employee_number, hire_date, -hire_date, salary, -salary"
+   ]
+  }
+ }
+}
+[HTTP 400, 0.004349s]
+
+
+$ curl '/api/v1/employees/999999'
+{
+ "error": {
+  "code": "not_found",
+  "message": "Record not found",
+  "details": {}
+ }
+}
+[HTTP 404, 0.006515s]

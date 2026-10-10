@@ -1,8 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterAll, afterEach, beforeAll } from 'vitest'
+import { resetApiMock, server } from './api-mock'
 
-afterEach(() => cleanup())
+// Any request without a handler fails the test: no accidental network calls.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+afterEach(() => {
+  cleanup()
+  server.resetHandlers()
+  resetApiMock()
+})
+afterAll(() => server.close())
 
 // jsdom lacks these browser APIs; Mantine uses them for color scheme and layout.
 Object.defineProperty(window, 'matchMedia', {
@@ -25,3 +33,4 @@ class ResizeObserverStub {
   disconnect() {}
 }
 window.ResizeObserver = ResizeObserverStub
+window.HTMLElement.prototype.scrollIntoView = () => {}

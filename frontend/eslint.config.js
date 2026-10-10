@@ -25,4 +25,6 @@ export default tseslint.config(
       ],
     },
   },
+  // Fast-refresh rules are about dev hot reload; test helpers legitimately mix components and functions.
+  { files: ['src/test/**'], rules: { 'react-refresh/only-export-components': 'off' } },
 )
