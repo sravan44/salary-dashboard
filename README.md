@@ -36,6 +36,15 @@ npm run dev                   # http://localhost:5173
 ```
 Database settings come from `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` (defaults: `localhost`, `5432`, `postgres`, empty).
 
+## Seed data
+
+```bash
+cd backend
+bin/rails db:seed                     # exactly 10,000 synthetic employees, random seed 42
+SEED_EMPLOYEES=500 SEED_RANDOM=7 bin/rails db:seed
+```
+Re-running replaces all employees and salary history, and the same seed always gives identical data. In production it refuses unless `SEED_REPLACE=1`.
+
 ## Tests and quality checks
 
 Both test suites **fail if coverage drops below 90%**.

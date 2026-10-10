@@ -97,6 +97,8 @@ flowchart TB
 ```mermaid
 erDiagram
   EMPLOYEE ||--|{ COMPENSATION : "history (exactly 1 current)"
+  EMPLOYEE ||--o{ VERSION : "audit log"
+  COMPENSATION ||--o{ VERSION : "audit log"
   EMPLOYEE {
     string employee_number UK
     string full_name
@@ -112,6 +114,17 @@ erDiagram
     string currency "ISO-4217"
     date effective_from
     date effective_to "NULL = current (partial unique index)"
+    string reason "hire | annual_review | promotion | market_adjustment | correction"
+    string revised_by
+    text notes
+  }
+  VERSION {
+    string item_type "Employee | Compensation"
+    bigint item_id
+    string event "create | update"
+    jsonb object_changes "field => [old, new]"
+    string whodunnit
+    datetime created_at "append-only"
   }
   USER {
     string email UK

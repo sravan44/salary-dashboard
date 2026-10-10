@@ -29,7 +29,8 @@ Amounts are serialized as **strings** to avoid float precision loss.
 
 ## Compensation
 - `GET /employees/:id/compensations`: full history, newest first
-- `POST /employees/:id/compensations` `{ amount, currency, effective_from }` → 201 with the new record; 422 if the date is ≤ the current start or in the future, the amount is ≤ 0, or the currency is unsupported
+- `POST /employees/:id/compensations` `{ amount, currency, effective_from, reason, notes? }` → 201 with the new record; 422 if the date is ≤ the current start or in the future, the amount is ≤ 0, the currency is unsupported, or the reason is not one of `annual_review | promotion | market_adjustment | correction` (`hire` is set automatically when the employee is created)
+- `GET /employees/:id/versions`: the employee's audit trail and that of their salary records, newest first (from M5)
 
 ## Insights
 **Shared insight filters:** `country`, `department` and `job_title` are accepted by all insights endpoints, so tables and charts always describe the same population.

@@ -1,9 +1,17 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+# Seeds a deterministic synthetic workforce: `bin/rails db:seed`
+#   SEED_EMPLOYEES  number of employees (default 10,000)
+#   SEED_RANDOM     random seed (default 42); the same value always yields identical data
+# Re-running REPLACES all employees and salary history (see Seeds::EmployeeSeeder).
+if Rails.env.production? && ENV["SEED_REPLACE"] != "1"
+  abort "Refusing to replace employee data in production. Set SEED_REPLACE=1 to confirm."
+end
+
+count = Integer(ENV.fetch("SEED_EMPLOYEES", "10000"))
+random_seed = Integer(ENV.fetch("SEED_RANDOM", "42"))
+
+started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+result = Seeds::EmployeeSeeder.new(count: count, random_seed: random_seed).call
+elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+puts "Seeded #{result[:employees]} employees, #{result[:compensations]} salary records " \
+     "(#{result[:current_compensations]} current) with random seed #{random_seed} in #{elapsed.round(2)}s"
