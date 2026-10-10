@@ -24,7 +24,7 @@ export function EmployeesPage() {
         <FilterChips
           active={filters.activeFilters}
           describe={describe}
-          onRemove={(key) => filters.setFilter(key, '')}
+          onRemove={filters.removeFilter}
           onClearAll={filters.clearAll}
         />
       </Paper>

@@ -111,9 +111,9 @@ type Dashboard {
 Narrow every dashboard widget to the same employees (active employees only)
 """
 input DashboardFilters {
-  country: CountryCode
-  department: Department
-  jobTitle: String
+  country: [CountryCode!]
+  department: [Department!]
+  jobTitle: [String!]
 }
 
 """

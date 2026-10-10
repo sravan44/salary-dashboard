@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { asha, directoryRequests, james, lastDirectoryRequest, respondToDirectory } from '../../test/api-mock'
+import { chooseOptions, selectedOptions } from '../../test/multi-select'
 import { currentSearchParams, renderApp } from '../../test/render-app'
 
 async function renderDirectory(path = '/employees') {
@@ -76,27 +77,40 @@ describe('Employee directory', () => {
     it('applies a filter, shows it as a removable chip, and removing the chip clears it', async () => {
       await renderDirectory()
 
-      await userEvent.selectOptions(screen.getByLabelText('Country'), 'IN')
-      await waitFor(() => expect(lastDirectoryRequest().get('country')).toBe('IN'))
-      expect(currentSearchParams().get('country')).toBe('IN')
+      await chooseOptions('Country', 'India')
+      await waitFor(() => expect(lastDirectoryRequest().getAll('country[]')).toEqual(['IN']))
+      expect(currentSearchParams().getAll('country')).toEqual(['IN'])
 
       await userEvent.click(screen.getByRole('button', { name: 'Remove filter Country: India' }))
-      await waitFor(() => expect(lastDirectoryRequest().has('country')).toBe(false))
+      await waitFor(() => expect(lastDirectoryRequest().has('country[]')).toBe(false))
       expect(currentSearchParams().has('country')).toBe(false)
+    })
+
+    it('takes several values per filter, with one chip per value; removing a chip keeps the others', async () => {
+      await renderDirectory()
+
+      await chooseOptions('Country', 'India', 'Germany')
+      await waitFor(() => expect(lastDirectoryRequest().getAll('country[]')).toEqual(['IN', 'DE']))
+      expect(currentSearchParams().getAll('country')).toEqual(['IN', 'DE'])
+      expect(selectedOptions('Country')).toEqual(['India', 'Germany'])
+
+      await userEvent.click(screen.getByRole('button', { name: 'Remove filter Country: India' }))
+      await waitFor(() => expect(lastDirectoryRequest().getAll('country[]')).toEqual(['DE']))
+      expect(screen.getByRole('button', { name: 'Remove filter Country: Germany' })).toBeInTheDocument()
     })
 
     it('combines several filters in one request', async () => {
       await renderDirectory()
 
-      await userEvent.selectOptions(screen.getByLabelText('Department'), 'Engineering')
-      await userEvent.selectOptions(screen.getByLabelText('Job title'), 'Software Engineer')
-      await userEvent.selectOptions(screen.getByLabelText('Status'), 'active')
+      await chooseOptions('Department', 'Engineering', 'People')
+      await chooseOptions('Job title', 'Software Engineer')
+      await chooseOptions('Status', 'active')
 
       await waitFor(() => {
         const params = lastDirectoryRequest()
-        expect(params.get('department')).toBe('Engineering')
-        expect(params.get('job_title')).toBe('Software Engineer')
-        expect(params.get('status')).toBe('active')
+        expect(params.getAll('department[]')).toEqual(['Engineering', 'People'])
+        expect(params.getAll('job_title[]')).toEqual(['Software Engineer'])
+        expect(params.getAll('status[]')).toEqual(['active'])
       })
     })
 
@@ -104,21 +118,21 @@ describe('Employee directory', () => {
       await renderDirectory()
 
       await userEvent.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'rao')
-      await userEvent.selectOptions(screen.getByLabelText('Country'), 'IN')
-      await userEvent.selectOptions(screen.getByLabelText('Department'), 'Engineering')
+      await chooseOptions('Country', 'India')
+      await chooseOptions('Department', 'Engineering')
 
       await waitFor(() => expect(currentSearchParams().get('q')).toBe('rao'))
-      expect(currentSearchParams().get('country')).toBe('IN')
-      expect(currentSearchParams().get('department')).toBe('Engineering')
-      expect(lastDirectoryRequest().get('country')).toBe('IN')
+      expect(currentSearchParams().getAll('country')).toEqual(['IN'])
+      expect(currentSearchParams().getAll('department')).toEqual(['Engineering'])
+      expect(lastDirectoryRequest().getAll('country[]')).toEqual(['IN'])
     })
 
     it('restores filters from a bookmarked URL', async () => {
-      await renderDirectory('/employees?country=US&status=active&q=smith')
+      await renderDirectory('/employees?country=US&country=IN&status=active&q=smith')
 
-      expect(directoryRequests[0].get('country')).toBe('US')
+      expect(directoryRequests[0].getAll('country[]')).toEqual(['US', 'IN'])
       expect(directoryRequests[0].get('q')).toBe('smith')
-      expect(screen.getByLabelText('Country')).toHaveValue('US')
+      expect(selectedOptions('Country')).toEqual(['United States', 'India'])
       expect(screen.getByRole('searchbox', { name: 'Search employees' })).toHaveValue('smith')
       expect(screen.getByRole('button', { name: 'Remove filter Search: smith' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Remove filter Status: active' })).toBeInTheDocument()
@@ -136,9 +150,9 @@ describe('Employee directory', () => {
     it('goes back to page 1 when a filter changes', async () => {
       await renderDirectory('/employees?page=3')
 
-      await userEvent.selectOptions(screen.getByLabelText('Department'), 'People')
+      await chooseOptions('Department', 'People')
 
-      await waitFor(() => expect(lastDirectoryRequest().get('department')).toBe('People'))
+      await waitFor(() => expect(lastDirectoryRequest().getAll('department[]')).toEqual(['People']))
       expect(lastDirectoryRequest().has('page')).toBe(false)
     })
   })

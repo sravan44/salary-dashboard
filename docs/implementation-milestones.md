@@ -12,6 +12,7 @@ Each milestone is one small, reviewed commit, or a few. **Every commit pauses fo
 | M4 | Employee management | Create/edit/deactivate API + forms | Specs + UI tests |
 | M5 | Salary history | `RecordChange` service, history API, history panel + "record change" form | Service/rollback specs, DB before/after evidence |
 | M6 | Pay dashboard over GraphQL | `/graphql` (Insights query objects; depth/complexity/limit/bucket/timeout limits; introspection switch), GraphiQL at `/graphiql`, schema contract tests, dashboard with KPI tiles + 6 Highcharts charts (type switcher, table view), lazy-loaded | Hand-calculated fixture specs, limit specs, SQL cross-check on 10k, contract test, browser run, screenshots |
+| M6b | Multi-select filters | Directory (`key[]`) and dashboard (`DashboardFilters` lists) take several values per filter (OR within, AND across, ≤ 50); Mantine MultiSelect with one chip per value; currency stays single | Request/GraphQL specs, UI tests, 10k SQL cross-check, screenshots |
 | M7 | Auth and security | `User`, session login, 401 on protected routes, Brakeman + bundler-audit + npm audit | Request specs, scan output |
 | M8 | Performance | EXPLAIN / timings on 10k seed; indexes only where justified | `docs/evidence/performance.md` |
 | M9 | Deploy and demo | Host deploy of the M2c image, smoke test, demo video, README | URL + smoke log |

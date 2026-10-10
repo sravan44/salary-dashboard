@@ -5,6 +5,13 @@ import { useSearchParams } from 'react-router-dom'
 export const FILTER_KEYS = ['q', 'country', 'department', 'job_title', 'status', 'currency', 'min_salary', 'max_salary'] as const
 export type FilterKey = (typeof FILTER_KEYS)[number]
 
+/** Filters that take several values (OR), stored as repeated keys: ?country=IN&country=US. */
+export const LIST_KEYS = ['country', 'department', 'job_title', 'status'] as const
+export type ListKey = (typeof LIST_KEYS)[number]
+export type SingleKey = Exclude<FilterKey, ListKey>
+
+export const isListKey = (key: string): key is ListKey => (LIST_KEYS as readonly string[]).includes(key)
+
 const SALARY_KEYS = ['min_salary', 'max_salary'] as const
 
 export function useDirectoryFilters() {
@@ -18,9 +25,12 @@ export function useDirectoryFilters() {
   latest.current = searchParams
 
   const update = useCallback(
-    (changes: Record<string, string | null>) => {
+    (changes: Record<string, string | string[] | null>) => {
       const next = new URLSearchParams(latest.current)
-      Object.entries(changes).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)))
+      Object.entries(changes).forEach(([key, value]) => {
+        next.delete(key)
+        ;[value ?? []].flat().forEach((v) => v && next.append(key, v))
+      })
       // A salary range only makes sense within one currency.
       if (!next.get('currency')) SALARY_KEYS.forEach((key) => next.delete(key))
       // Any change other than paging starts again from the first page.
@@ -41,11 +51,20 @@ export function useDirectoryFilters() {
     update({ sort: current === field ? `-${field}` : field })
   }
 
+  const getAll = (key: ListKey) => [...new Set(searchParams.getAll(key).filter(Boolean))]
+
   return {
     params: searchParams,
-    get: (key: string) => searchParams.get(key) ?? '',
-    activeFilters: FILTER_KEYS.filter((key) => searchParams.get(key)).map((key) => ({ key, value: searchParams.get(key)! })),
-    setFilter: (key: FilterKey, value: string) => update({ [key]: value.trim() || null }),
+    get: (key: SingleKey | 'sort') => searchParams.get(key) ?? '',
+    getAll,
+    activeFilters: FILTER_KEYS.flatMap((key) =>
+      (isListKey(key) ? getAll(key) : [searchParams.get(key) ?? ''].filter(Boolean)).map((value) => ({ key, value })),
+    ),
+    setFilter: (key: SingleKey, value: string) => update({ [key]: value.trim() || null }),
+    setValues: (key: ListKey, values: string[]) => update({ [key]: values }),
+    /** Removes one chip: a single value of a multi-value filter, or the whole single-value filter. */
+    removeFilter: (key: FilterKey, value: string) =>
+      update({ [key]: isListKey(key) ? latest.current.getAll(key).filter((v) => v !== value) : null }),
     setPage: (page: number) => update({ page: page > 1 ? String(page) : null }),
     setPerPage: (perPage: string) => update({ per_page: perPage }),
     sort: searchParams.get('sort') ?? 'full_name',

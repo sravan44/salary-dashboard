@@ -53,6 +53,14 @@ RSpec.describe "GraphQL API" do
       )
     end
 
+    it "accepts a list of values per filter (OR within a filter)" do
+      body = graphql(<<~GQL, variables: { filters: { country: %w[DE FR], jobTitle: [ "HR Generalist", "Account Executive" ] } })
+        query($filters: DashboardFilters) { dashboard(filters: $filters) { headcount } }
+      GQL
+
+      expect(body.dig("data", "dashboard", "headcount")).to eq(2)
+    end
+
     it "accepts department names with spaces through the enum" do
       body = graphql('{ dashboard(filters: { department: CUSTOMER_SUPPORT }) { headcount } }')
 
@@ -75,6 +83,13 @@ RSpec.describe "GraphQL API" do
 
       expect(error_messages(body).first).to match(/XX/)
       expect(body["data"]).to be_nil
+    end
+
+    it "rejects more than 50 values in one filter" do
+      titles = Array.new(51) { |i| "Title #{i}" }
+      body = graphql("query($f: DashboardFilters) { dashboard(filters: $f) { headcount } }", variables: { f: { jobTitle: titles } })
+
+      expect(error_messages(body).join).to match(/jobTitle is too long \(maximum is 50\)/)
     end
 
     it "requires a currency for the salary distribution, so amounts are never mixed" do

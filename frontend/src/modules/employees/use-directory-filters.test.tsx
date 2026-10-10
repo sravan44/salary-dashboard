@@ -17,12 +17,32 @@ describe('useDirectoryFilters', () => {
     const { result } = setup()
 
     act(() => {
-      result.current.filters.setFilter('country', 'IN')
-      result.current.filters.setFilter('department', 'Engineering')
+      result.current.filters.setValues('country', ['IN', 'US'])
+      result.current.filters.setValues('department', ['Engineering'])
     })
 
-    expect(params(result).get('country')).toBe('IN')
-    expect(params(result).get('department')).toBe('Engineering')
+    expect(params(result).getAll('country')).toEqual(['IN', 'US'])
+    expect(params(result).getAll('department')).toEqual(['Engineering'])
+  })
+
+  it('removes one value of a multi-value filter and keeps the rest', () => {
+    const { result } = setup('/employees?country=IN&country=US&q=rao')
+
+    act(() => result.current.filters.removeFilter('country', 'IN'))
+    expect(params(result).getAll('country')).toEqual(['US'])
+
+    act(() => result.current.filters.removeFilter('q', 'rao'))
+    expect(params(result).toString()).toBe('country=US')
+  })
+
+  it('lists one active filter per value', () => {
+    const { result } = setup('/employees?country=IN&country=US&currency=USD')
+
+    expect(result.current.filters.activeFilters).toEqual([
+      { key: 'country', value: 'IN' },
+      { key: 'country', value: 'US' },
+      { key: 'currency', value: 'USD' },
+    ])
   })
 
   it('flips the sort direction when toggled twice in the same tick', () => {
@@ -42,7 +62,7 @@ describe('useDirectoryFilters', () => {
     act(() => result.current.filters.setPage(5))
     expect(params(result).get('page')).toBe('5')
 
-    act(() => result.current.filters.setFilter('status', 'active'))
+    act(() => result.current.filters.setValues('status', ['active']))
     expect(params(result).has('page')).toBe(false)
   })
 

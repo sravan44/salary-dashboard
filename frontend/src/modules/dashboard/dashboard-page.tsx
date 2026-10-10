@@ -1,4 +1,4 @@
-import { Alert, Button, Center, Group, Loader, NativeSelect, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Center, Group, Loader, MultiSelect, NativeSelect, SimpleGrid, Stack, Text, Title } from '@mantine/core'
 import { useCurrencyDetail, useDashboardOverview } from './api'
 import { DepartmentRangeChart } from './components/department-range-chart'
 import { HeadcountByCountryChart } from './components/headcount-by-country-chart'
@@ -7,10 +7,8 @@ import { HiresByYearChart } from './components/hires-by-year-chart'
 import { JobTitlePayChart } from './components/job-title-pay-chart'
 import { SalaryDistributionChart } from './components/salary-distribution-chart'
 import { StatTiles } from './components/stat-tiles'
-import { useDashboardFilters, type DashboardParam } from './use-dashboard-filters'
+import { useDashboardFilters, type DashboardListParam } from './use-dashboard-filters'
 import type { DashboardReference } from './types'
-
-const ANY = { value: '', label: 'Any' }
 
 export function DashboardPage() {
   const filters = useDashboardFilters()
@@ -19,7 +17,7 @@ export function DashboardPage() {
   // Salary charts show one currency: the chosen one, or the most common in this selection. While the
   // previous selection's numbers are still on screen (placeholder), don't guess from them.
   const defaultCurrency = overview.isPlaceholderData ? undefined : counts?.currencies[0]?.currency
-  const currency = filters.get('currency') || defaultCurrency
+  const currency = filters.currency || defaultCurrency
   const detail = useCurrencyDetail(filters.filters, currency)
 
   return (
@@ -56,7 +54,7 @@ export function DashboardPage() {
             w={360}
             value={currency}
             data={counts.currencies.map((c) => ({ value: c.currency, label: `${c.currency} (${c.headcount.toLocaleString('en-US')} employees)` }))}
-            onChange={(event) => filters.set('currency', event.currentTarget.value)}
+            onChange={(event) => filters.setCurrency(event.currentTarget.value)}
           />
           {detail.isError ? (
             <Alert color="red" title="Could not load salary charts" role="alert">
@@ -80,18 +78,32 @@ export function DashboardPage() {
 }
 
 function FilterBar({ filters, reference }: { filters: ReturnType<typeof useDashboardFilters>; reference?: DashboardReference }) {
-  const select = (key: DashboardParam, label: string, options: { value: string; label: string }[]) => (
-    <NativeSelect label={label} w={220} value={filters.get(key)} data={[ANY, ...options]} onChange={(e) => filters.set(key, e.currentTarget.value)} />
-  )
+  // Several values per filter (OR within a filter, AND across filters).
+  const select = (key: DashboardListParam, label: string, options: { value: string; label: string }[]) => {
+    const selected = filters.getAll(key)
+    return (
+      <MultiSelect
+        label={label}
+        w={260}
+        placeholder={selected.length ? undefined : 'Any'}
+        data={options}
+        value={selected}
+        onChange={(values) => filters.setValues(key, values)}
+        searchable
+        clearable
+        nothingFoundMessage="No matches"
+      />
+    )
+  }
   const plain = (values: string[] = []) => values.map((value) => ({ value, label: value }))
 
   return (
-    <Group align="end">
+    <Group align="flex-start" wrap="wrap">
       {select('country', 'Country', (reference?.countries ?? []).map((c) => ({ value: c.code, label: c.name })))}
       {select('department', 'Department', plain(reference?.departments))}
       {select('job_title', 'Job title', plain(reference?.jobTitles))}
       {filters.hasFilters && (
-        <Button variant="subtle" onClick={filters.clear}>
+        <Button variant="subtle" mt={25} onClick={filters.clear}>
           Clear filters
         </Button>
       )}

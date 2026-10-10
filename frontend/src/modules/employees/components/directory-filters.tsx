@@ -1,37 +1,50 @@
-import { Group, NativeSelect, SimpleGrid, TextInput } from '@mantine/core'
+import { Group, MultiSelect, NativeSelect, SimpleGrid, TextInput } from '@mantine/core'
 import { useDebouncedCallback } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import type { ReferenceData } from '../types'
-import type { FilterKey, useDirectoryFilters } from '../use-directory-filters'
+import type { ListKey, useDirectoryFilters } from '../use-directory-filters'
 
 type Props = { filters: ReturnType<typeof useDirectoryFilters>; reference: ReferenceData | undefined }
 
-const options = (values: string[] = [], label: (v: string) => string = (v) => v) => [
-  { value: '', label: 'Any' },
-  ...values.map((value) => ({ value, label: label(value) })),
-]
+const options = (values: string[] = [], label: (v: string) => string = (v) => v) => values.map((value) => ({ value, label: label(value) }))
 
 export function DirectoryFilters({ filters, reference }: Props) {
   const countryName = (code: string) => reference?.countries.find((c) => c.code === code)?.name ?? code
-  const select = (key: FilterKey, label: string, values: string[] | undefined, display?: (v: string) => string) => (
-    <NativeSelect
-      label={label}
-      value={filters.get(key)}
-      data={options(values, display)}
-      onChange={(event) => filters.setFilter(key, event.currentTarget.value)}
-    />
-  )
+  // Several values per filter (OR). Searchable, because there are dozens of job titles.
+  const multi = (key: ListKey, label: string, values: string[] | undefined, display?: (v: string) => string) => {
+    const selected = filters.getAll(key)
+    return (
+      <MultiSelect
+        label={label}
+        placeholder={selected.length ? undefined : 'Any'}
+        data={options(values, display)}
+        value={selected}
+        onChange={(next) => filters.setValues(key, next)}
+        searchable
+        clearable
+        nothingFoundMessage="No matches"
+      />
+    )
+  }
   const hasCurrency = filters.get('currency') !== ''
 
   return (
     <>
       <SearchBox value={filters.get('q')} onSearch={(value) => filters.setFilter('q', value)} />
-      <SimpleGrid cols={{ base: 2, sm: 4, lg: 8 }} mt="sm">
-        {select('country', 'Country', reference?.countries.map((c) => c.code), countryName)}
-        {select('department', 'Department', reference?.departments)}
-        {select('job_title', 'Job title', reference?.job_titles)}
-        {select('status', 'Status', reference?.statuses)}
-        {select('currency', 'Currency', reference?.currencies)}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mt="sm">
+        {multi('country', 'Country', reference?.countries.map((c) => c.code), countryName)}
+        {multi('department', 'Department', reference?.departments)}
+        {multi('job_title', 'Job title', reference?.job_titles)}
+        {multi('status', 'Status', reference?.statuses)}
+      </SimpleGrid>
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mt="sm">
+        {/* One currency only: a salary range is meaningless across currencies. */}
+        <NativeSelect
+          label="Currency"
+          value={filters.get('currency')}
+          data={[{ value: '', label: 'Any' }, ...options(reference?.currencies)]}
+          onChange={(event) => filters.setFilter('currency', event.currentTarget.value)}
+        />
         <AmountInput label="Min salary" value={filters.get('min_salary')} disabled={!hasCurrency} onCommit={(v) => filters.setFilter('min_salary', v)} />
         <AmountInput label="Max salary" value={filters.get('max_salary')} disabled={!hasCurrency} onCommit={(v) => filters.setFilter('max_salary', v)} />
       </SimpleGrid>

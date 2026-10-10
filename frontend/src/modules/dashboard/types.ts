@@ -26,5 +26,5 @@ export type OverviewData = {
 
 export type CurrencyDetailData = { dashboard: { distribution: SalaryBucket[]; byDepartment: PayStat[]; byJobTitle: PayStat[] } }
 
-/** GraphQL DashboardFilters: department uses the schema's enum name (e.g. CUSTOMER_SUPPORT). */
-export type DashboardFiltersInput = { country?: string; department?: string; jobTitle?: string }
+/** GraphQL DashboardFilters: lists (OR within a filter); department uses the enum name (e.g. CUSTOMER_SUPPORT). */
+export type DashboardFiltersInput = { country?: string[]; department?: string[]; jobTitle?: string[] }

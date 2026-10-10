@@ -1,6 +1,7 @@
 module Insights
   # Who the dashboard describes: active employees with their current salary, narrowed by the
-  # dashboard filters. Every insights query starts from this, so all widgets agree.
+  # dashboard filters (one or several values each: OR within a filter, AND across filters).
+  # Every insights query starts from this, so all widgets agree.
   class Population
     FILTERS = %i[country department job_title].freeze
     COLUMNS = {
@@ -10,7 +11,8 @@ module Insights
     }.freeze
 
     def initialize(filters = {})
-      @filters = filters.to_h.symbolize_keys.slice(*FILTERS).transform_values(&:presence).compact
+      @filters = filters.to_h.symbolize_keys.slice(*FILTERS)
+                        .transform_values { |value| Array(value).compact_blank.uniq.presence }.compact
     end
 
     def relation

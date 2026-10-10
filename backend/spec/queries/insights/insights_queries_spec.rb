@@ -141,6 +141,15 @@ RSpec.describe "Insights queries" do
       expect(population.relation.count).to eq(2)
     end
 
+    it "accepts several values per filter: OR within a filter, AND across filters" do
+      expect(described_class.new(country: %w[DE FR IN]).relation.count).to eq(3)
+      expect(described_class.new(country: %w[US DE], department: %w[People Sales]).relation.count).to eq(2)
+    end
+
+    it "ignores blank values inside a list" do
+      expect(described_class.new(country: [ "", nil ], job_title: []).relation.count).to eq(6)
+    end
+
     it "ignores blank filters" do
       expect(described_class.new(country: "", department: nil).relation.count).to eq(6)
     end

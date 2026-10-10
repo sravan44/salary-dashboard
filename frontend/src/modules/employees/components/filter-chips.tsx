@@ -15,7 +15,7 @@ const LABELS: Record<FilterKey, string> = {
 type Props = {
   active: { key: FilterKey; value: string }[]
   describe: (key: FilterKey, value: string) => string
-  onRemove: (key: FilterKey) => void
+  onRemove: (key: FilterKey, value: string) => void
   onClearAll: () => void
 }
 
@@ -27,10 +27,10 @@ export function FilterChips({ active, describe, onRemove, onClearAll }: Props) {
       {active.map(({ key, value }) => {
         const text = `${LABELS[key]}: ${describe(key, value)}`
         return (
-          <Pill key={key} size="md">
+          <Pill key={`${key}:${value}`} size="md">
             <Group gap={4} wrap="nowrap">
               {text}
-              <CloseButton size="xs" aria-label={`Remove filter ${text}`} onClick={() => onRemove(key)} />
+              <CloseButton size="xs" aria-label={`Remove filter ${text}`} onClick={() => onRemove(key, value)} />
             </Group>
           </Pill>
         )

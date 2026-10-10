@@ -18,6 +18,7 @@ module Employees
     DEFAULT_PER_PAGE = 25
     MAX_PER_PAGE = 100
     MAX_QUERY_LENGTH = 100
+    MAX_VALUES = 50
     SORTS = {
       "full_name" => "employees.full_name",
       "employee_number" => "employees.employee_number",
@@ -51,11 +52,11 @@ module Employees
     def parse
       {
         q: parse_query,
-        country: parse_choice(:country, Acme::Reference.country_codes),
-        department: parse_choice(:department, Acme::Reference.departments),
-        status: parse_choice(:status, Employee.statuses.keys),
+        country: parse_choices(:country, Acme::Reference.country_codes),
+        department: parse_choices(:department, Acme::Reference.departments),
+        status: parse_choices(:status, Employee.statuses.keys),
         currency: parse_choice(:currency, Acme::Reference.currencies),
-        job_title: present(:job_title),
+        job_title: parse_choices(:job_title),
         min_salary: parse_amount(:min_salary),
         max_salary: parse_amount(:max_salary),
         page: parse_integer(:page, default: 1, min: 1),
@@ -96,6 +97,16 @@ module Employees
       value = present(key)
       @errors[key] << "must be one of: #{allowed.join(', ')}" if value && !allowed.include?(value)
       value
+    end
+
+    # Several values for one filter (OR); blank and repeated values are dropped.
+    def parse_choices(key, allowed = nil)
+      values = Array(@params[key]).map { |value| value.to_s.strip }.reject(&:empty?).uniq
+      return nil if values.empty?
+
+      @errors[key] << "accepts at most #{MAX_VALUES} values" if values.size > MAX_VALUES
+      @errors[key] << "must be one of: #{allowed.join(', ')}" if allowed && (values - allowed).any?
+      values
     end
 
     def parse_amount(key)

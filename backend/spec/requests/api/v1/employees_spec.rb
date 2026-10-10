@@ -99,6 +99,18 @@ RSpec.describe "Employee directory API" do
       expect(numbers(country: "US", department: "Engineering", q: "emma")).to eq([ "EMP-000005" ])
     end
 
+    it "accepts several values per filter: OR within a filter, AND across filters" do
+      expect(numbers(country: %w[DE FR])).to contain_exactly("EMP-000003", "EMP-000006")
+      expect(numbers(country: %w[IN US], department: %w[Finance People])).to eq([ "EMP-000004" ])
+      expect(numbers(job_title: [ "HR Generalist", "Account Executive" ])).to contain_exactly("EMP-000003", "EMP-000006")
+      expect(numbers(status: %w[active terminated]).size).to eq(6)
+    end
+
+    it "ignores blank and repeated values in a multi-value filter" do
+      expect(numbers(country: [ "", "DE", "DE" ])).to eq([ "EMP-000003" ])
+      expect(numbers(country: [ "" ]).size).to eq(6)
+    end
+
     it "returns an empty page, not an error, when nothing matches" do
       body = directory(country: "SG")
 
@@ -191,6 +203,20 @@ RSpec.describe "Employee directory API" do
 
       expect(response).to have_http_status(:bad_request)
       expect(body["error"]["details"].keys).to contain_exactly("country", "department", "status", "currency")
+    end
+
+    it "rejects a multi-value filter when any one value is unknown" do
+      body = directory(country: %w[DE XX], status: %w[active retired])
+
+      expect(response).to have_http_status(:bad_request)
+      expect(body["error"]["details"].keys).to contain_exactly("country", "status")
+    end
+
+    it "rejects more than 50 values for one filter" do
+      body = directory(job_title: Array.new(51) { |i| "Title #{i}" })
+
+      expect(response).to have_http_status(:bad_request)
+      expect(body["error"]["details"]["job_title"]).to eq([ "accepts at most 50 values" ])
     end
 
     it "rejects an overly long search" do

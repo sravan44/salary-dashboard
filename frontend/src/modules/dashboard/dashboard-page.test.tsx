@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { dashboardReference, graphqlCalls, lastGraphqlCall, overview, respondToCurrencyDetail, respondToOverview } from '../../test/api-mock'
+import { chooseOptions, selectedOptions } from '../../test/multi-select'
 import { currentSearchParams, renderApp } from '../../test/render-app'
 
 async function renderDashboard(path = '/') {
@@ -177,38 +178,39 @@ describe('Dashboard', () => {
     it('sends every filter to both requests, using the schema’s enum names, and keeps them in the URL', async () => {
       await renderDashboard()
 
-      await userEvent.selectOptions(screen.getByLabelText('Country'), 'IN')
-      await userEvent.selectOptions(screen.getByLabelText('Department'), 'Customer Support')
-      await userEvent.selectOptions(screen.getByLabelText('Job title'), 'Support Lead')
+      await chooseOptions('Country', 'India', 'United States')
+      await chooseOptions('Department', 'Customer Support')
+      await chooseOptions('Job title', 'Support Lead', 'Software Engineer')
 
-      const expected = { country: 'IN', department: 'CUSTOMER_SUPPORT', jobTitle: 'Support Lead' }
+      const expected = { country: ['IN', 'US'], department: ['CUSTOMER_SUPPORT'], jobTitle: ['Support Lead', 'Software Engineer'] }
       await waitFor(() => expect(lastGraphqlCall('DashboardOverview')?.variables.filters).toEqual(expected))
       await waitFor(() => expect(lastGraphqlCall('DashboardCurrencyDetail')?.variables.filters).toEqual(expected))
-      expect(currentSearchParams().get('department')).toBe('Customer Support')
+      expect(currentSearchParams().getAll('country')).toEqual(['IN', 'US'])
+      expect(currentSearchParams().getAll('department')).toEqual(['Customer Support'])
     })
 
     it('never asks for salary charts in the previous selection’s currency while new numbers load', async () => {
       respondToOverview((variables) => {
-        const india = (variables.filters as { country?: string })?.country === 'IN'
+        const india = (variables.filters as { country?: string[] })?.country?.join() === 'IN'
         const currencies = india ? [{ currency: 'INR', headcount: 2300 }] : [{ currency: 'USD', headcount: 2700 }, { currency: 'INR', headcount: 2300 }]
         return { data: { dashboard: { ...overview, currencies }, reference: dashboardReference } }
       })
       await renderDashboard()
       await waitFor(() => expect(lastGraphqlCall('DashboardCurrencyDetail')?.variables.currency).toBe('USD'))
 
-      await userEvent.selectOptions(screen.getByLabelText('Country'), 'IN')
+      await chooseOptions('Country', 'India')
 
-      await waitFor(() => expect(lastGraphqlCall('DashboardCurrencyDetail')?.variables).toMatchObject({ currency: 'INR', filters: { country: 'IN' } }))
-      const indiaRequests = graphqlCalls.filter((c) => c.operation === 'DashboardCurrencyDetail' && (c.variables.filters as { country?: string }).country === 'IN')
+      await waitFor(() => expect(lastGraphqlCall('DashboardCurrencyDetail')?.variables).toMatchObject({ currency: 'INR', filters: { country: ['IN'] } }))
+      const indiaRequests = graphqlCalls.filter((c) => c.operation === 'DashboardCurrencyDetail' && (c.variables.filters as { country?: string[] }).country?.join() === 'IN')
       expect(indiaRequests.map((c) => c.variables.currency)).toEqual(['INR'])
     })
 
     it('restores filters from a bookmarked URL', async () => {
-      await renderDashboard('/?country=US&currency=INR')
+      await renderDashboard('/?country=US&country=IN&currency=INR')
 
-      expect(lastGraphqlCall('DashboardOverview')?.variables.filters).toEqual({ country: 'US' })
+      expect(lastGraphqlCall('DashboardOverview')?.variables.filters).toEqual({ country: ['US', 'IN'] })
       await waitFor(() => expect(lastGraphqlCall('DashboardCurrencyDetail')?.variables.currency).toBe('INR'))
-      expect(screen.getByLabelText('Country')).toHaveValue('US')
+      expect(selectedOptions('Country')).toEqual(['United States', 'India'])
     })
 
     it('clears all filters', async () => {
