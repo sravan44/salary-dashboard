@@ -24,6 +24,13 @@ RSpec.describe Compensation do
       expect(build(:compensation, employee:, amount: "1000000000000")).not_to be_valid
     end
 
+    it "says a missing currency can't be blank" do
+      compensation = build(:compensation, employee:, currency: "")
+      compensation.validate
+
+      expect(compensation.errors[:currency]).to eq([ "can't be blank" ])
+    end
+
     it "rejects an unsupported currency" do
       expect(build(:compensation, employee:, currency: "XYZ")).not_to be_valid
     end

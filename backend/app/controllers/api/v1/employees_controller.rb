@@ -18,6 +18,26 @@ module Api
         employee = Employee.includes(:current_compensation).find(params[:id])
         render json: { data: EmployeeSerializer.detail(employee) }
       end
+
+      def create
+        attributes = params.require(:employee).permit(*Employees::Create::PROFILE_FIELDS, salary: %i[amount currency])
+        respond_with Employees::Create.call(attributes), :created
+      end
+
+      def update
+        employee = Employee.find(params[:id])
+        attributes = params.require(:employee)
+                           .permit(*Employees::Update::EDITABLE_FIELDS, *Employees::Update::LOCKED_FIELDS.keys, salary: {})
+        respond_with Employees::Update.call(employee, attributes), :ok
+      end
+
+      private
+
+      def respond_with(result, status)
+        return render_validation_errors(result.errors) unless result.success?
+
+        render json: { data: EmployeeSerializer.detail(result.employee.reload) }, status:
+      end
     end
   end
 end

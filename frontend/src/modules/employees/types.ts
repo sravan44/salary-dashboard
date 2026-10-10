@@ -23,3 +23,11 @@ export type ReferenceData = {
   statuses: string[]
   job_titles: string[]
 }
+
+export type EmployeeDetail = EmployeeSummary & { email: string }
+
+/** Profile fields HR can edit after creation. Hire date, employee number and salary are not among them. */
+export type EmployeeUpdate = Pick<EmployeeSummary, 'full_name' | 'country_code' | 'department' | 'job_title'> & { email: string }
+export type StatusChange = { status: EmployeeSummary['status'] }
+
+export type EmployeeCreate = EmployeeUpdate & { hire_date: string; salary: Money }

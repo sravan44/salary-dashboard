@@ -16,7 +16,7 @@ class Compensation < ApplicationRecord
   scope :current, -> { where(effective_to: nil) }
 
   validates :amount, numericality: { greater_than: 0, less_than_or_equal_to: MAX_AMOUNT }
-  validates :currency, inclusion: { in: Acme::Reference.currencies }
+  validates :currency, presence: true, inclusion: { in: Acme::Reference.currencies, allow_blank: true }
   validates :effective_from, presence: true
   validates :notes, length: { maximum: 1_000 }
   validate :effective_to_not_before_effective_from

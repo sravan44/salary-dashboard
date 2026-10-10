@@ -1,4 +1,5 @@
-import { Badge, Table, UnstyledButton } from '@mantine/core'
+import { Anchor, Badge, Table, UnstyledButton } from '@mantine/core'
+import { Link } from 'react-router-dom'
 import { formatMoney } from '../../../shared/format-money'
 import type { EmployeeSummary } from '../types'
 
@@ -29,7 +30,11 @@ export function EmployeesTable({ employees, ...sortProps }: { employees: Employe
         {employees.map((employee) => (
           <Table.Tr key={employee.id}>
             <Table.Td>{employee.employee_number}</Table.Td>
-            <Table.Td>{employee.full_name}</Table.Td>
+            <Table.Td>
+              <Anchor component={Link} to={`/employees/${employee.id}`}>
+                {employee.full_name}
+              </Anchor>
+            </Table.Td>
             <Table.Td>{employee.country_code}</Table.Td>
             <Table.Td>{employee.department}</Table.Td>
             <Table.Td>{employee.job_title}</Table.Td>

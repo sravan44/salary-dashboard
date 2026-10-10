@@ -16,9 +16,14 @@ The assessment brief does not settle several business rules. Each one below is a
 | A10 | Median definition | For an even count, the mean of the two middle values. Results are rounded to 2 dp, half-up. | — | — |
 | A11 | Seed data | Synthetic only and deterministic (fixed RNG seed). Salary bands per country × level are plausible but **not** real market data. | Distributions look artificial | — |
 | A12 | FX (Phase 2) | Frankfurter reference rates, cached per (base, quote, date). Labelled "indicative", never used for payroll. | Provider down or terms change | Verified at Phase 2 start |
+| A14 | Who sets the employee number? | The server: the next free `EMP-######`, assigned under a database lock (decided by Sravan). | HR has numbers from another system | Import from an HR system |
+| A15 | Can a deactivated employee come back? | Yes. Reactivation sets `active` again; both changes are in the audit log (decided by Sravan). | — | — |
+| A16 | Can the hire date be edited? | No, it is locked after creation: it starts the salary history, and changing it would rewrite a salary record (decided by Sravan). | A wrong hire date stays | A correction workflow (with M5) is requested |
+| A17 | Does changing an employee's country change their salary currency? | No. Pay changes only through a recorded salary change (M5). | Currency looks wrong after a move | — |
+| A18 | Who is recorded in the audit log before login exists? | `unauthenticated`, honestly, rather than a made-up user. M7 records the signed-in user. | — | M7 |
 | A13 | Deployment host | Chosen at M8: the lowest-friction host with managed Postgres. A single container where Rails serves the built React app. | Free-tier limits | — |
 
 ## Explicit assessment requirements vs. assumptions vs. optional ideas
 - **Explicit:** one-page requirements; backend plus React UI; relational DB; seed of 10,000; meaningful unit tests; incremental commits; AI artifacts; deployed app; video demo.
-- **Assumed (above):** A1–A13.
+- **Assumed (above):** A1–A18.
 - **Optional / later:** FX (Phase 2), CSV import/export, Kubernetes manifests and future-service templates, audit log of who changed what.

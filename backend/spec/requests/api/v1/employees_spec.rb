@@ -226,6 +226,80 @@ RSpec.describe "Employee directory API" do
     end
   end
 
+  describe "POST /api/v1/employees" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    around { |example| travel_to(Date.new(2026, 10, 10)) { example.run } }
+
+    let(:payload) do
+      { employee: { full_name: "Meera Iyer", email: "meera@acme.example", country_code: "IN", department: "Engineering",
+                    job_title: "Software Engineer", hire_date: "2026-10-01", salary: { amount: "1850000", currency: "INR" } } }
+    end
+
+    it "creates the employee with their first salary and returns it" do
+      post "/api/v1/employees", params: payload, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body["data"]).to include(
+        "employee_number" => "EMP-000007", "full_name" => "Meera Iyer", "status" => "active", "hire_date" => "2026-10-01",
+        "email" => "meera@acme.example", "current_salary" => { "amount" => "1850000.00", "currency" => "INR" }
+      )
+    end
+
+    it "records who made the change (unauthenticated until login exists)" do
+      post "/api/v1/employees", params: payload, as: :json
+
+      expect(Version.where(item_type: "Employee").last.whodunnit).to eq("unauthenticated")
+    end
+
+    it "returns 422 with errors per field and saves nothing" do
+      payload[:employee].merge!(email: "not-an-email", salary: { amount: "abc", currency: "INR" })
+
+      expect { post "/api/v1/employees", params: payload, as: :json }.not_to change(Employee, :count)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]).to include("code" => "validation_failed")
+      expect(response.parsed_body["error"]["details"].keys).to contain_exactly("email", "salary.amount")
+    end
+
+    it "returns 400 when there are no employee fields at all" do
+      post "/api/v1/employees", params: { name: "x" }, as: :json
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body["error"]["code"]).to eq("invalid_parameters")
+    end
+  end
+
+  describe "PATCH /api/v1/employees/:id" do
+    it "updates profile fields and returns the employee" do
+      patch "/api/v1/employees/#{clara.id}", params: { employee: { job_title: "HR Business Partner" } }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["data"]).to include("job_title" => "HR Business Partner",
+                                                      "current_salary" => { "amount" => "72000.00", "currency" => "EUR" })
+    end
+
+    it "deactivates and reactivates an employee" do
+      patch "/api/v1/employees/#{clara.id}", params: { employee: { status: "terminated" } }, as: :json
+      expect(response.parsed_body["data"]["status"]).to eq("terminated")
+
+      patch "/api/v1/employees/#{clara.id}", params: { employee: { status: "active" } }, as: :json
+      expect(response.parsed_body["data"]["status"]).to eq("active")
+    end
+
+    it "refuses to change the hire date" do
+      patch "/api/v1/employees/#{clara.id}", params: { employee: { hire_date: "2010-01-01" } }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]["details"]).to eq("hire_date" => [ "cannot be changed after the employee is created" ])
+    end
+
+    it "returns 404 for an unknown employee" do
+      patch "/api/v1/employees/0", params: { employee: { full_name: "x" } }, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "GET /api/v1/employees/:id" do
     it "returns the employee profile with current salary" do
       get "/api/v1/employees/#{clara.id}"

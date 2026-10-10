@@ -7,7 +7,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :employees, only: %i[index show]
+      resources :employees, only: %i[index show create update]
       resource :reference, only: :show
     end
     match "*path", to: "v1/base#route_not_found", via: :all

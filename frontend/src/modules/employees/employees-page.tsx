@@ -1,4 +1,5 @@
-import { Alert, Center, Group, Loader, NativeSelect, Pagination, Paper, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Center, Group, Loader, NativeSelect, Pagination, Paper, Stack, Text, Title } from '@mantine/core'
+import { Link } from 'react-router-dom'
 import { ApiError } from '../../shared/api-client'
 import { useEmployeeDirectory, useReferenceData } from './api'
 import { DirectoryFilters } from './components/directory-filters'
@@ -18,7 +19,12 @@ export function EmployeesPage() {
 
   return (
     <Stack gap="xs">
-      <Title order={2}>Employees</Title>
+      <Group justify="space-between">
+        <Title order={2}>Employees</Title>
+        <Button component={Link} to="/employees/new">
+          Add employee
+        </Button>
+      </Group>
       <Paper withBorder p="md">
         <DirectoryFilters filters={filters} reference={reference.data} />
         <FilterChips

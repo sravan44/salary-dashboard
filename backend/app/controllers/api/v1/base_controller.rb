@@ -3,8 +3,16 @@ module Api
     # Consistent JSON errors for every API endpoint:
     # { "error": { "code": "...", "message": "...", "details": { "field": ["..."] } } }
     class BaseController < ApplicationController
+      # Who is recorded in the audit trail. There is no login yet (M7 sets the signed-in user),
+      # so changes are attributed honestly rather than to a made-up person.
+      before_action { Current.actor = "unauthenticated" }
+
       rescue_from ActiveRecord::RecordNotFound do
         render_error(:not_found, "not_found", "Record not found")
+      end
+
+      rescue_from ActionController::ParameterMissing do |error|
+        render_error(:bad_request, "invalid_parameters", "Missing parameter: #{error.param}", { error.param => [ "is required" ] })
       end
 
       rescue_from Employees::DirectoryQuery::InvalidParams do |error|
@@ -16,6 +24,10 @@ module Api
       end
 
       private
+
+      def render_validation_errors(details)
+        render_error(:unprocessable_content, "validation_failed", "Some fields are invalid", details)
+      end
 
       def render_error(status, code, message, details = {})
         render json: { error: { code: code, message: message, details: details } }, status: status

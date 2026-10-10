@@ -13,8 +13,8 @@ class Employee < ApplicationRecord
   validates :employee_number, presence: true, uniqueness: true, format: { with: EMPLOYEE_NUMBER_FORMAT, allow_blank: true }
   validates :full_name, presence: true, length: { maximum: 120 }
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
-  validates :country_code, inclusion: { in: Acme::Reference.country_codes }
-  validates :department, inclusion: { in: Acme::Reference.departments }
+  validates :country_code, presence: true, inclusion: { in: Acme::Reference.country_codes, allow_blank: true }
+  validates :department, presence: true, inclusion: { in: Acme::Reference.departments, allow_blank: true }
   validates :job_title, presence: true, length: { maximum: 120 }
   validates :hire_date, presence: true
 end

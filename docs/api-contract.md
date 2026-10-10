@@ -24,8 +24,10 @@ Response: `{ "data": [EmployeeSummary], "meta": { "page", "per_page", "total", "
 Amounts are serialized as **strings** to avoid float precision loss.
 
 - `GET /employees/:id`: summary + email
-- `POST /employees`: create, with the initial salary (amount, currency, effective_from = hire_date)
-- `PATCH /employees/:id`: edit profile fields and status (salary is never changed here)
+- `POST /employees` `{ employee: { full_name, email, country_code, department, job_title, hire_date, salary: { amount, currency } } }` → **201** with the employee. The server assigns the next `employee_number` and sets `status: active`. The employee and the first salary (`reason: hire`, `effective_from = hire_date`) are saved in one transaction, or not at all. `hire_date` must be today or earlier.
+- `PATCH /employees/:id` `{ employee: { full_name?, email?, country_code?, department?, job_title?, status? } }` → **200**. `status: terminated` deactivates and `status: active` reactivates; the record is never deleted. Sending `hire_date`, `employee_number` or `salary` returns 422 with the reason on that field. Changing the country does not change the salary currency.
+- Errors: a missing `employee` object returns **400** `invalid_parameters`. Invalid fields return **422** `{ error: { code: "validation_failed", details: { "email": ["has already been taken"], "salary.amount": ["must be greater than 0"] } } }`, and nothing is saved.
+- Every create and update writes an audit `version` in the same transaction (`whodunnit: "unauthenticated"` until M7).
 
 ## Compensation
 - `GET /employees/:id/compensations`: full history, newest first

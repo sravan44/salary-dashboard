@@ -114,7 +114,53 @@ export function respondToCurrencyDetail(responder: typeof detailResponder) {
   detailResponder = responder
 }
 
+// ---- Employee profile, create and update ------------------------------------------------
+type EmployeeWrite = { method: 'POST' | 'PATCH'; id?: string; body: { employee: Record<string, unknown> } }
+type WriteReply = { status?: number; body: JsonBodyType }
+
+/** Every create/update the UI sent, oldest first. */
+export const employeeWrites: EmployeeWrite[] = []
+
+// Like the real API, a saved change is what the next GET returns.
+const initialDetails = () => ({
+  '1': { ...asha, email: 'asha.rao@acme.example' },
+  '2': { ...james, email: 'james.smith@acme.example' },
+})
+let employeeDetails: Record<string, Record<string, unknown>> = initialDetails()
+
+const defaultWriteResponder = (write: EmployeeWrite): WriteReply => {
+  const { salary, ...fields } = write.body.employee
+  if (write.method === 'POST') {
+    employeeDetails['3'] = { id: 3, employee_number: 'EMP-000003', status: 'active', ...fields, current_salary: salary }
+    return { status: 201, body: { data: employeeDetails['3'] } }
+  }
+  employeeDetails[write.id!] = { ...employeeDetails[write.id!], ...fields }
+  return { body: { data: employeeDetails[write.id!] } }
+}
+let writeResponder = defaultWriteResponder
+
+export function respondToEmployeeWrite(responder: (write: EmployeeWrite) => WriteReply) {
+  writeResponder = responder
+}
+
+function recordWrite(write: EmployeeWrite) {
+  employeeWrites.push(write)
+  const { status = 200, body } = writeResponder(write)
+  return HttpResponse.json(body, { status })
+}
+
 export const server = setupServer(
+  http.get('*/api/v1/employees/:id', ({ params }) => {
+    const employee = employeeDetails[params.id as string]
+    if (!employee) return HttpResponse.json({ error: { code: 'not_found', message: 'Record not found' } }, { status: 404 })
+    return HttpResponse.json({ data: employee })
+  }),
+  http.post('*/api/v1/employees', async ({ request }) =>
+    recordWrite({ method: 'POST', body: (await request.json()) as EmployeeWrite['body'] }),
+  ),
+  http.patch('*/api/v1/employees/:id', async ({ request, params }) =>
+    recordWrite({ method: 'PATCH', id: params.id as string, body: (await request.json()) as EmployeeWrite['body'] }),
+  ),
   http.get('*/api/v1/reference', () => HttpResponse.json({ data: reference })),
   graphql.query('DashboardOverview', ({ variables }) => {
     graphqlCalls.push({ operation: 'DashboardOverview', variables })
@@ -133,6 +179,9 @@ export const server = setupServer(
 )
 
 export function resetApiMock() {
+  employeeWrites.length = 0
+  employeeDetails = initialDetails()
+  respondToEmployeeWrite(defaultWriteResponder)
   graphqlCalls.length = 0
   respondToOverview(() => ({ data: { dashboard: overview, reference: dashboardReference } }))
   respondToCurrencyDetail(() => ({ data: { dashboard: currencyDetail } }))

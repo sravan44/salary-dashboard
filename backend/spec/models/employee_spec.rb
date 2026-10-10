@@ -36,6 +36,13 @@ RSpec.describe Employee do
       expect(build(:employee, email: "not-an-email")).not_to be_valid
     end
 
+    it "says a missing country or department can't be blank (not that it's an unknown value)" do
+      employee = build(:employee, country_code: "", department: nil)
+      employee.validate
+
+      expect(employee.errors.to_hash).to include(country_code: [ "can't be blank" ], department: [ "can't be blank" ])
+    end
+
     it "rejects unsupported countries and departments" do
       expect(build(:employee, country_code: "XX")).not_to be_valid
       expect(build(:employee, department: "Astrology")).not_to be_valid
