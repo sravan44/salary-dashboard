@@ -45,22 +45,24 @@ RSpec.describe "users rake tasks" do
   end
 
   describe "users:seed_demo" do
-    it "does nothing without DEMO_USER_PASSWORD" do
+    it "creates the demo sign-ins with the documented password when none is given (outside production)" do
       output = run("users:seed_demo", "DEMO_USER_PASSWORD" => nil)
 
-      expect(output).to include("DEMO_USER_PASSWORD is not set")
+      expect(User.order(:email).pluck(:email)).to eq(%w[admin@acme.example hr@acme.example viewer@acme.example])
+      expect(output).to include("Created demo users: admin@acme.example, hr@acme.example, viewer@acme.example")
+    end
+
+    it "creates nothing in production without DEMO_USER_PASSWORD, and says so" do
+      allow(Rails.env).to receive(:production?).and_return(true)
+
+      expect(run("users:seed_demo", "DEMO_USER_PASSWORD" => nil)).to include("no demo users in production")
       expect(User.count).to eq(0)
     end
 
-    it "creates one demo user per role, and leaves existing users alone on a re-run" do
-      run("users:seed_demo", "DEMO_USER_PASSWORD" => "a local demo password")
-      User.find_by!(email: "viewer@acme.example").update!(password: "changed by the user")
-      run("users:seed_demo", "DEMO_USER_PASSWORD" => "a local demo password")
+    it "reports when there is nothing to create" do
+      run("users:seed_demo", "DEMO_USER_PASSWORD" => nil)
 
-      expect(User.order(:email).pluck(:email, :roles)).to eq([
-        [ "admin@acme.example", %w[hr_manager admin] ], [ "hr@acme.example", %w[hr_manager] ], [ "viewer@acme.example", %w[viewer] ]
-      ])
-      expect(User.find_by!(email: "viewer@acme.example").authenticate("changed by the user")).to be_truthy
+      expect(run("users:seed_demo", "DEMO_USER_PASSWORD" => nil)).to include("Demo users already exist")
     end
   end
 end

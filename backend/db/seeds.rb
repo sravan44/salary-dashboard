@@ -16,3 +16,8 @@ elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 
 puts "Seeded #{result[:employees]} employees, #{result[:compensations]} salary records " \
      "(#{result[:current_compensations]} current) with random seed #{random_seed} in #{elapsed.round(2)}s"
+
+# Demo sign-ins (admin@, hr@, viewer@acme.example; password in the README). In production only
+# when DEMO_USER_PASSWORD is set. Existing users are left unchanged.
+created = Seeds::DemoUsers.call
+puts "Created demo users: #{created.join(', ')}" if created.any?

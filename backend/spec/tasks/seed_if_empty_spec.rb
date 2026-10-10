@@ -33,6 +33,7 @@ RSpec.describe "app:seed_if_empty" do
     expect(Employee.count).to eq(40)
     expect(Compensation.current.count).to eq(40)
     expect(output).to include("Seeded 40 employees")
+    expect(User.pluck(:email)).to contain_exactly("admin@acme.example", "hr@acme.example", "viewer@acme.example")
   end
 
   it "never touches a database that already has employees" do

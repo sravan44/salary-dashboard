@@ -10,24 +10,15 @@ namespace :users do
     puts "Created #{user.email} with roles: #{user.roles.join(', ')}"
   end
 
-  # Demo accounts for local use and demos, one per role. Needs DEMO_USER_PASSWORD (compose sets a
-  # local placeholder); without it nothing is created. Existing users are never changed.
-  DEMO_USERS = {
-    "viewer@acme.example" => %w[viewer],
-    "hr@acme.example" => %w[hr_manager],
-    "admin@acme.example" => %w[admin hr_manager]
-  }.freeze
-
-  desc "Create demo users (viewer@, hr@, admin@acme.example) when DEMO_USER_PASSWORD is set"
+  desc "Create the demo sign-ins (admin@, hr@, viewer@acme.example); see README. In production only with DEMO_USER_PASSWORD"
   task seed_demo: :environment do
-    password = ENV["DEMO_USER_PASSWORD"]
-    next puts("DEMO_USER_PASSWORD is not set; no demo users created.") if password.blank?
-
-    DEMO_USERS.each do |email, roles|
-      next puts("#{email} exists; left unchanged.") if User.exists?(email:)
-
-      User.create!(email:, roles:, password:)
-      puts "Created demo user #{email} (#{roles.join(', ')})"
+    created = Seeds::DemoUsers.call
+    if created.any?
+      puts "Created demo users: #{created.join(', ')}"
+    elsif Rails.env.production? && ENV["DEMO_USER_PASSWORD"].blank?
+      puts "DEMO_USER_PASSWORD is not set; no demo users in production."
+    else
+      puts "Demo users already exist; left unchanged."
     end
   end
 end

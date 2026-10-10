@@ -9,6 +9,18 @@ Salary management for an HR Manager overseeing 10,000 employees across multiple 
 | `backend/` | Ruby 3.3.6, Rails 8.1 (API mode), graphql-ruby, PostgreSQL 16, RSpec, SimpleCov, RuboCop, Brakeman, bundler-audit |
 | `frontend/` | React 19 + TypeScript, Vite, Mantine, React Router, TanStack Query, Highcharts, GraphiQL, Vitest + React Testing Library |
 
+## Demo sign-ins
+
+`bin/rails db:seed` (and the Docker setup) creates one account per role:
+
+| Email | Password | Roles | Can use |
+|---|---|---|---|
+| `admin@acme.example` | `local-demo-password` | Admin, HR manager, Viewer | Dashboard, Employees, **Users** (add people, change roles) |
+| `hr@acme.example` | `local-demo-password` | HR manager | Dashboard, Employees (view salaries, create, edit, deactivate) |
+| `viewer@acme.example` | `local-demo-password` | Viewer | Dashboard only (no individual employees or salaries) |
+
+> **Local and demo use only.** The password is public, so in production these accounts are **never** created unless `DEMO_USER_PASSWORD` is set on purpose (for example, for a demo deployment), and then that password is used instead. Real deployments create users with `bin/rails users:create`, and Admins add people on the **Users** page. Existing accounts are never changed by re-seeding.
+
 ## Run with Docker (recommended)
 
 One container runs the whole app: Rails serves the API **and** the built React app at http://localhost:3000. A second container runs PostgreSQL.
@@ -19,9 +31,6 @@ docker compose up --build    # no setup needed; builds the image, starts db + ap
 Local defaults (database password, secret key) live in `compose.yaml` and suit local use only; a `.env` file can override them.
 - App: http://localhost:3000 · Health: http://localhost:3000/up · REST: http://localhost:3000/api/v1/employees
 - GraphQL: `POST http://localhost:3000/graphql` · GraphiQL explorer: http://localhost:3000/graphiql (enabled locally via `GRAPHIQL_ENABLED`)
-
-**Sign in** with a demo account (compose creates them; password = `DEMO_USER_PASSWORD`, `local-demo-password` unless you set it):
-`viewer@acme.example` (dashboard only) · `hr@acme.example` (dashboard + employees) · `admin@acme.example` (Admin + HR manager: also **Users**).
 
 Build the image on its own with `docker build -t salary-insights .`. It runs in production mode; set `DATABASE_URL` (or `DB_*`) and `SECRET_KEY_BASE`. Leave `FORCE_SSL` at its default (`true`) behind an HTTPS proxy.
 
@@ -45,7 +54,7 @@ Database settings come from `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` (defa
 
 Accounts (no sign-up page):
 ```bash
-DEMO_USER_PASSWORD=<local password> bin/rails users:seed_demo                 # viewer@, hr@, admin@acme.example (local/demo only)
+bin/rails users:seed_demo        # just the demo sign-ins above, without re-seeding employees
 EMAIL=you@example.com ROLES=admin,hr_manager PASSWORD=<12+ chars> bin/rails users:create   # real deployments
 ```
 After that, an Admin adds people and changes roles on the **Users** page.

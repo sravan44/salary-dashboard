@@ -81,6 +81,22 @@ The test user, its audit rows and the sessions were then removed. The local data
 - [`m7-users-admin.png`](screenshots/m7-users-admin.png): the Users screen, with roles multi-selects, "Saved", and the refused self-demotion.
 - [`m7-header-roles.png`](screenshots/m7-header-roles.png): the signed-in user with two roles.
 
+## Addendum: demo sign-ins seeded by `db:seed` (README credentials)
+`Seeds::DemoUsers` creates admin@ (Admin + HR manager + Viewer), hr@ (HR manager) and viewer@ (Viewer) with `local-demo-password` outside production. In production they are created only with an explicit `DEMO_USER_PASSWORD`. Existing users are never changed. Specs: `spec/services/seeds/demo_users_spec.rb`, plus updated task specs (backend 233 examples, 0 failures, 100% line and branch coverage).
+
+Live run on the dev database (demo users removed first):
+
+```
+$ bin/rails db:seed
+Seeded 10000 employees, 32915 salary records (10000 current) with random seed 42 in 9.88s
+Created demo users: admin@acme.example, hr@acme.example, viewer@acme.example
+
+sign-in with local-demo-password → roles → GET /api/v1/employees | GET /api/v1/users
+admin@acme.example  [viewer, hr_manager, admin]  200 | 200
+hr@acme.example     [hr_manager]                 200 | 403
+viewer@acme.example [viewer]                     403 | 403
+```
+
 ## What this does not prove
 - **Small-group inference by Viewers.** Deferred by decision (A19).
 - **Password reset and disabling accounts.** Deferred.

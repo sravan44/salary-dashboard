@@ -55,4 +55,5 @@
 | Self sign-up, password reset, disabling accounts | Complete account lifecycle | **Defer** | Admin adds users; `users:create` for the first admin; changing roles covers most needs | Users ask for self-service, or someone leaves the company |
 | Shared cache store for the sign-in rate limit | Works across several app containers | **Defer** | One container today; a per-process memory store is enough and needs no Redis | Running more than one app container |
 | Remember the last page across a deliberate sign-out | "Return to where I was" | **Reject** | The next person may have other roles; after signing out, the login page starts fresh. An expired session still returns the same user to where they were | — |
+| Demo users created everywhere with the README password | Zero-setup demo | **Reject** | A published password must not open a real deployment. In production the demo users exist only when `DEMO_USER_PASSWORD` is set on purpose | — |
 | Retry every failed query 3× (TanStack default) | Resilience | **Reject** | GraphQL validation errors and 4xx fail identically every time; only network/5xx are retried, at most twice | — |

@@ -22,7 +22,7 @@ The assessment brief does not settle several business rules. Each one below is a
 | A17 | Does changing an employee's country change their salary currency? | No. Pay changes only through a recorded salary change (M5). | Currency looks wrong after a move | — |
 | A18 | Who is recorded in the audit log? | The signed-in user's email (since M7). Before login existed, changes were recorded as `unauthenticated`. | — | — |
 | A19 | Can a Viewer infer one person's pay from small groups on the dashboard? | Yes, for now: all aggregates are shown to Viewers (decided by Sravan). A group of one person shows that person's salary. | Pay leaks to Viewers via tiny groups | Before Viewers outside HR get access: hide groups under 5 people |
-| A20 | How do accounts start? | Demo users per role locally (`DEMO_USER_PASSWORD`); `users:create` in production; Admins add users and set roles in the app. No self sign-up, no password reset or account disabling yet. | A forgotten password needs a console fix | Users ask for self-service |
+| A20 | How do accounts start? | `db:seed` creates demo sign-ins per role with a password documented in the README (Sravan's request); in production only when `DEMO_USER_PASSWORD` is set on purpose. `users:create` for real deployments; Admins add users and set roles in the app. No self sign-up, no password reset or account disabling yet. | A forgotten password needs a console fix | Users ask for self-service |
 | A13 | Deployment host | Chosen at M8: the lowest-friction host with managed Postgres. A single container where Rails serves the built React app. | Free-tier limits | — |
 
 ## Explicit assessment requirements vs. assumptions vs. optional ideas
