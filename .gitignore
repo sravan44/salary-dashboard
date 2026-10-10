@@ -1,0 +1,30 @@
+# Secrets: never commit real env files or Rails keys
+.env
+.env.*
+!.env.example
+backend/config/master.key
+backend/config/credentials/*.key
+
+# Ruby / Rails
+backend/log/*
+backend/tmp/*
+!backend/log/.keep
+!backend/tmp/.keep
+backend/storage/*
+backend/coverage/
+backend/vendor/bundle/
+backend/.bundle/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+*.local
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sw?

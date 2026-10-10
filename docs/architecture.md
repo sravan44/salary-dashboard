@@ -8,7 +8,7 @@
 flowchart LR
   HR[HR Manager<br/>browser] -->|HTTPS| WEB
   subgraph Deployed container
-    WEB[Rails 8<br/>serves built React SPA<br/>+ /api/v1 JSON]
+    WEB[Rails 8.1<br/>serves built React SPA<br/>+ /api/v1 JSON]
   end
   WEB -->|ActiveRecord| DB[(PostgreSQL)]
   WEB -.->|Phase 2, cached| FX[Frankfurter<br/>reference FX rates]
@@ -16,8 +16,8 @@ flowchart LR
 
 | Layer | Responsibility | Choice |
 |-------|----------------|--------|
-| `frontend/` | Directory (search and filters), employee detail, salary form, insights dashboard | React 18 + TypeScript (Vite), Mantine components, TanStack Query for server state, **Recharts** for charts. Filter state is kept in the URL query string. |
-| `backend/` | Validation, business rules, REST API, auth | Rails 8 API mode, thin controllers |
+| `frontend/` | Directory (search and filters), employee detail, salary form, insights dashboard | React 19 + TypeScript (Vite), Mantine components, TanStack Query for server state, **Recharts** for charts. Filter state is kept in the URL query string. |
+| `backend/` | Validation, business rules, REST API, auth | Rails 8.1 API mode, thin controllers |
 | Database | Integrity, filtering, aggregation | PostgreSQL 16 (median via `percentile_cont`) |
 | Dev setup | Reproducible environment | Root `compose.yaml` (db + backend + frontend) |
 | Production | One deployable unit | Multi-stage Dockerfile: the React build is copied into Rails `public/` → **same origin, no CORS, cookie session** |

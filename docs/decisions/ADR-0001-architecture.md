@@ -12,7 +12,7 @@ We need a full-stack salary tool for one persona (HR Manager), 10,000 employees,
 4. Microservices (salary, employees, future paystubs): no independent scaling, ownership or security boundary exists today. That adds deployment and consistency cost for no benefit.
 
 ## Decision
-- One Git repo with `backend/` (Rails 8 API) and `frontend/` (React + TS via Vite) and a root `compose.yaml` for development.
+- One Git repo with `backend/` (Rails 8.1 API) and `frontend/` (React + TS via Vite) and a root `compose.yaml` for development.
 - **PostgreSQL** in dev, test and prod for parity: partial unique indexes, `percentile_cont` for medians, CHECK constraints. SQLite was considered and rejected, because it lacks `percentile_cont` and differs from prod.
 - In production, Rails serves the compiled SPA from `public/`. This gives one deployable unit and same-origin cookie auth, so no CORS or token storage in JS.
 - Effective-dated, append-only `compensations` table (see domain-model.md).

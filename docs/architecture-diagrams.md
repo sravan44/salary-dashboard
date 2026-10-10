@@ -23,11 +23,11 @@ The deployable pieces and how they communicate.
 
 ```mermaid
 flowchart LR
-  B["Browser<br/>React 18 + TypeScript SPA<br/>Mantine · TanStack Query · Recharts"]
+  B["Browser<br/>React 19 + TypeScript SPA<br/>Mantine · TanStack Query · Recharts"]
   subgraph APP["Single app container (production)"]
     direction TB
     STATIC["public/<br/>built SPA assets"]
-    API["Rails 8 API<br/>/api/v1/*<br/>session cookie auth"]
+    API["Rails 8.1 API<br/>/api/v1/*<br/>session cookie auth"]
   end
   DB[("PostgreSQL 16<br/>employees · compensations · users")]
   B -->|GET / , assets| STATIC

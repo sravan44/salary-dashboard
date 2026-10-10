@@ -13,3 +13,6 @@
 | Cache insights | Faster dashboard | **Defer** | No baseline yet; 10k rows aggregate quickly in Postgres | M8 measurements show a need |
 | Countries/departments as DB tables with admin UI | Normalisation | **Defer** | Static list is enough; no requirement to manage them | HR needs to edit them |
 | Kubernetes manifests + future-service templates | Playbook suggests them | **Defer** (optional) | Does not serve the HR Manager; only if time remains | After M11 |
+| Install gems from an alternative rubygems mirror when rubygems.org is blocked | Unblocks the backend quickly | **Reject** | Routes around the organisation's network policy and trusts an unvetted source | Instead: offline install from Sravan's own rbenv gem cache |
+| Keep the generated `config/master.key` + `credentials.yml.enc` | Rails default | **Reject** | No secrets are needed yet; one less key to leak. Production reads `SECRET_KEY_BASE` from the environment | A real secret needs encrypted storage |
+| Lower SimpleCov to line-only coverage | Easier to hit 90% | **Reject** | Branch coverage catches untested `if`/`else` paths, which matter for business rules | — |

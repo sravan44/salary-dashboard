@@ -1,0 +1,22 @@
+# Connection settings come from the environment (see /.env.example).
+# Production uses DATABASE_URL, which Rails merges over these values.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DB_PORT") { 5432 } %>
+  username: <%= ENV.fetch("DB_USER") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+
+development:
+  <<: *default
+  database: salary_insights_development
+
+test:
+  <<: *default
+  database: salary_insights_test
+
+production:
+  <<: *default
+  database: salary_insights_production
