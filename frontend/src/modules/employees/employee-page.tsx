@@ -1,8 +1,8 @@
 import { Alert, Badge, Button, Center, Group, Loader, Modal, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { formatMoney } from '../../shared/format-money'
-import { useEmployee, useReferenceData, useUpdateEmployee } from './api'
+import { useEmployee, useReferenceData, useSalaryHistory, useUpdateEmployee } from './api'
 import { AuditLog } from './components/audit-log'
 import { SalaryHistory } from './components/salary-history'
 import type { EmployeeDetail } from './types'
@@ -11,6 +11,11 @@ export function EmployeePage() {
   const { id = '' } = useParams()
   const employee = useEmployee(id)
   const reference = useReferenceData()
+  // The reporting currency for amounts on this page is a viewing choice, kept in the URL.
+  const [params, setParams] = useSearchParams()
+  const report = params.get('report') ?? ''
+  const setReport = (currency: string) => setParams(currency ? { report: currency } : {}, { replace: true })
+  const history = useSalaryHistory(id, report)
 
   if (employee.isPending) {
     return (
@@ -37,7 +42,7 @@ export function EmployeePage() {
     ['Department', e.department],
     ['Job title', e.job_title],
     ['Hire date', e.hire_date],
-    ['Current salary', e.current_salary ? formatMoney(e.current_salary.amount, e.current_salary.currency) : '—'],
+    ['Current salary', currentSalary(e, report ? history.data?.records.find((r) => r.current)?.converted : null)],
   ]
 
   return (
@@ -68,7 +73,7 @@ export function EmployeePage() {
           ))}
         </SimpleGrid>
       </Paper>
-      <SalaryHistory employee={e} />
+      <SalaryHistory employee={e} history={history} report={report} onReportChange={setReport} />
       <AuditLog employeeId={e.id} />
     </Stack>
   )
@@ -121,4 +126,11 @@ function StatusButton({ employee }: { employee: EmployeeDetail }) {
       </Modal>
     </>
   )
+}
+
+/** "₹2,400,000", or with a reporting currency "₹2,400,000 (≈ $28,571.43)". */
+function currentSalary(e: EmployeeDetail, converted: { amount: string; currency: string } | null | undefined) {
+  if (!e.current_salary) return '—'
+  const original = formatMoney(e.current_salary.amount, e.current_salary.currency)
+  return converted ? `${original} (≈ ${formatMoney(converted.amount, converted.currency)})` : original
 }

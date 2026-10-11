@@ -45,7 +45,22 @@ export type SalaryRecord = {
   revised_by: string | null
   /** % change from the record before; null for the first record or when the currency changed. */
   change_percent: string | null
+  /** Only with ?report=: the amount in the reporting currency, or null when there is no rate. */
+  converted?: { amount: string; currency: string } | null
 }
+
+/** Provenance of converted amounts (meta.conversion with ?report=). Indicative only. */
+export type HistoryConversion = {
+  to: string
+  available: boolean
+  rate_date: string | null
+  source: string | null
+  stale: boolean
+  rates: { currency: string; rate: string }[]
+  missing: string[]
+}
+
+export type SalaryHistoryData = { records: SalaryRecord[]; conversion: HistoryConversion | null }
 
 export type SalaryChange = { amount: string; currency: string; effective_from: string; reason: string; notes: string }
 

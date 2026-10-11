@@ -3,8 +3,6 @@ module Insights
   # rate FIRST, then aggregated, so groups that span currencies get a real median. Employees whose
   # currency has no rate are left out and reported. Stored salaries are only read, never changed.
   class ConvertedQuery
-    RATE_DISPLAY_DECIMALS = 10
-
     def initialize(population, to:, snapshot:)
       @population = population
       @to = to
@@ -23,7 +21,7 @@ module Insights
     # The rate used for each currency in this selection, alphabetically.
     def rates
       factors.sort.map do |currency, rate|
-        { currency:, rate: rate.round(RATE_DISPLAY_DECIMALS).to_s("F"), rate_date: @snapshot.rate_date, source: @snapshot.source }
+        { currency:, rate: Fx.display_rate(rate), rate_date: @snapshot.rate_date, source: @snapshot.source }
       end
     end
 

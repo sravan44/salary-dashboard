@@ -264,6 +264,26 @@ const initialHistory = (): Record<string, SalaryRecord[]> => ({
 })
 let salaryHistory = initialHistory()
 export const salaryChanges: { id: string; body: Record<string, unknown> }[] = []
+/** The ?report= value of every salary-history request (null = original currencies). */
+export const historyRequests: (string | null)[] = []
+
+type HistoryConversion = {
+  to: string; available: boolean; rate_date: string | null; source: string | null; stale: boolean
+  rates: { currency: string; rate: string }[]; missing: string[]
+}
+/** Rates of 2026-10-09 into USD (1 EUR = 1.10 USD = 92.40 INR); other currencies have none. */
+const defaultConversion = (to: string, currencies: string[]): HistoryConversion => {
+  const usd: Record<string, string> = { INR: '0.0119047619', USD: '1.0' }
+  const rates = to === 'USD' ? currencies.filter((c) => usd[c]).sort().map((currency) => ({ currency, rate: usd[currency] })) : []
+  return {
+    to, available: true, rate_date: '2026-10-09', source: 'ECB reference rates via Frankfurter', stale: false, rates,
+    missing: currencies.filter((c) => !rates.some((r) => r.currency === c)).sort(),
+  }
+}
+let conversionResponder = defaultConversion
+export function respondToHistoryConversion(responder: typeof defaultConversion) {
+  conversionResponder = responder
+}
 let salaryChangeResponder: ((body: Record<string, unknown>) => WriteReply) | null = null
 export function respondToSalaryChange(responder: ((body: Record<string, unknown>) => WriteReply) | null) {
   salaryChangeResponder = responder
@@ -280,7 +300,20 @@ export const auditTrail = [
 ]
 
 export const server = setupServer(
-  http.get('*/api/v1/employees/:id/compensations', ({ params }) => HttpResponse.json({ data: salaryHistory[params.id as string] ?? [] })),
+  http.get('*/api/v1/employees/:id/compensations', ({ params, request }) => {
+    const records = salaryHistory[params.id as string] ?? []
+    const report = new URL(request.url).searchParams.get('report')
+    historyRequests.push(report)
+    if (!report) return HttpResponse.json({ data: records })
+    // Like the server: amount × rate, 2 dp; a currency without a rate is not converted.
+    const conversion = conversionResponder(report, [...new Set(records.map((r) => r.currency))])
+    const rateOf = (currency: string) => conversion.rates.find((r) => r.currency === currency)?.rate
+    const data = records.map((r) => {
+      const rate = rateOf(r.currency)
+      return { ...r, converted: rate ? { amount: (Number(r.amount) * Number(rate)).toFixed(2), currency: report } : null }
+    })
+    return HttpResponse.json({ data, meta: { conversion } })
+  }),
   http.post('*/api/v1/employees/:id/compensations', async ({ request, params }) => {
     const id = params.id as string
     const body = (await request.json()) as Record<string, unknown>
@@ -372,6 +405,8 @@ export function resetApiMock() {
   salaryHistory = initialHistory()
   auditTrailFails = false
   salaryChanges.length = 0
+  historyRequests.length = 0
+  respondToHistoryConversion(defaultConversion)
   respondToSalaryChange(null)
   signedInUser = hrUser
   sessionExpired = false

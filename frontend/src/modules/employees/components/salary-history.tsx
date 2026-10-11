@@ -2,8 +2,9 @@ import { Alert, Button, Center, Group, Loader, Modal, NativeSelect, Paper, Simpl
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../../../shared/api-client'
 import { formatMoney } from '../../../shared/format-money'
+import { shortRate } from '../../../shared/format-rate'
 import { useRecordSalaryChange, useReferenceData, useSalaryHistory } from '../api'
-import type { EmployeeDetail, SalaryChange, SalaryRecord } from '../types'
+import type { EmployeeDetail, HistoryConversion, SalaryChange, SalaryRecord } from '../types'
 
 const REASON_LABELS: Record<string, string> = {
   hire: 'Hire', annual_review: 'Annual review', promotion: 'Promotion', market_adjustment: 'Market adjustment', correction: 'Correction',
@@ -17,20 +18,39 @@ function changeLabel(record: SalaryRecord, isOldest: boolean) {
   return `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(2)}%`
 }
 
+type Props = {
+  employee: EmployeeDetail
+  /** Fetched once by the page (it also shows the converted current salary). */
+  history: ReturnType<typeof useSalaryHistory>
+  /** Reporting currency for converted amounts; '' = original currencies only. */
+  report: string
+  onReportChange: (currency: string) => void
+}
+
 /** The full salary history (never edited, only added to) and the action that adds to it. */
-export function SalaryHistory({ employee }: { employee: EmployeeDetail }) {
-  const history = useSalaryHistory(String(employee.id))
+export function SalaryHistory({ employee, history, report, onReportChange }: Props) {
+  const reference = useReferenceData()
   const [open, setOpen] = useState(false)
   const active = employee.status === 'active'
+  const records = history.data?.records ?? []
+  const conversion = report ? history.data?.conversion : null
 
   return (
     <Paper withBorder p="md">
       <Stack gap="sm">
-        <Group justify="space-between">
+        <Group justify="space-between" align="flex-end">
           <Title order={3}>Salary history</Title>
-          <Button onClick={() => setOpen(true)} disabled={!active}>
-            Record salary change
-          </Button>
+          <Group align="flex-end">
+            <NativeSelect
+              label="Show amounts in"
+              value={report}
+              data={[{ value: '', label: 'Original currency' }, ...(reference.data?.currencies ?? []).map((c) => ({ value: c, label: c }))]}
+              onChange={(e) => onReportChange(e.currentTarget.value)}
+            />
+            <Button onClick={() => setOpen(true)} disabled={!active}>
+              Record salary change
+            </Button>
+          </Group>
         </Group>
         {!active && (
           <Text size="sm" c="dimmed">
@@ -51,6 +71,7 @@ export function SalaryHistory({ employee }: { employee: EmployeeDetail }) {
               <Table.Tr>
                 <Table.Th>Period</Table.Th>
                 <Table.Th ta="right">Annual salary</Table.Th>
+                {conversion && <Table.Th ta="right">{`In ${conversion.to}`}</Table.Th>}
                 <Table.Th ta="right">Change</Table.Th>
                 <Table.Th>Reason</Table.Th>
                 <Table.Th>Notes</Table.Th>
@@ -58,10 +79,13 @@ export function SalaryHistory({ employee }: { employee: EmployeeDetail }) {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {history.data.map((record, index, all) => (
+              {records.map((record, index, all) => (
                 <Table.Tr key={record.id} fw={record.current ? 600 : undefined}>
                   <Table.Td>{`${record.effective_from} → ${record.effective_to ?? 'current'}`}</Table.Td>
                   <Table.Td ta="right">{formatMoney(record.amount, record.currency)}</Table.Td>
+                  {conversion && (
+                    <Table.Td ta="right">{record.converted ? formatMoney(record.converted.amount, record.converted.currency) : 'n/a (no rate)'}</Table.Td>
+                  )}
                   <Table.Td ta="right">{changeLabel(record, index === all.length - 1)}</Table.Td>
                   <Table.Td>{REASON_LABELS[record.reason] ?? record.reason}</Table.Td>
                   <Table.Td>{record.notes ?? ''}</Table.Td>
@@ -71,8 +95,9 @@ export function SalaryHistory({ employee }: { employee: EmployeeDetail }) {
             </Table.Tbody>
           </Table>
         )}
+        {conversion && <ConversionNote conversion={conversion} />}
       </Stack>
-      {open && <RecordChangeForm employee={employee} currentCurrency={history.data?.[0]?.currency} onClose={() => setOpen(false)} />}
+      {open && <RecordChangeForm employee={employee} currentCurrency={records[0]?.currency} onClose={() => setOpen(false)} />}
     </Paper>
   )
 }
@@ -148,5 +173,37 @@ function RecordChangeForm({ employee, currentCurrency, onClose }: { employee: Em
         </Stack>
       </form>
     </Modal>
+  )
+}
+
+/** Where converted amounts come from: rates, date and source, plus any gaps. Indicative only. */
+function ConversionNote({ conversion: c }: { conversion: HistoryConversion }) {
+  if (!c.available) {
+    return (
+      <Alert color="yellow" role="alert">
+        No exchange rates have been fetched yet, so amounts are shown in their original currency only.
+      </Alert>
+    )
+  }
+  return (
+    <Stack gap={4}>
+      {c.stale && (
+        <Alert color="yellow" role="alert">
+          {`These rates are more than 7 days old (${c.rate_date}).`}
+        </Alert>
+      )}
+      {c.missing.length > 0 && (
+        <Text size="sm" c="orange">{`No exchange rate for ${c.missing.join(', ')}: those amounts are not converted.`}</Text>
+      )}
+      <Text role="note" aria-label="Conversion details" size="xs" c="dimmed">
+        {`Converted to ${c.to} at ${c.source}, rates of ${c.rate_date}: `}
+        {c.rates.map((r, i) => (
+          <span key={r.currency} title={`1 ${r.currency} = ${r.rate} ${c.to} (exact)`}>
+            {`${i > 0 ? ' · ' : ''}1 ${r.currency} = ${shortRate(r.rate)} ${c.to}`}
+          </span>
+        ))}
+        {". Indicative: today's rates are applied to every record, including past ones."}
+      </Text>
+    </Stack>
   )
 }

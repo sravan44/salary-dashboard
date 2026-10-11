@@ -19,6 +19,7 @@ RSpec.describe "Salary history API" do
   describe "GET /api/v1/employees/:id/compensations" do
     it "lists the full history newest first, with % change only when the currency is the same" do
       get "/api/v1/employees/#{employee.id}/compensations"
+      expect(response.parsed_body).not_to have_key("meta") # no conversion unless asked for
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["data"]).to eq([
@@ -29,6 +30,55 @@ RSpec.describe "Salary history API" do
         { "id" => history[0].id, "amount" => "1800000.00", "currency" => "INR", "effective_from" => "2023-04-01", "effective_to" => "2024-03-31",
           "current" => false, "reason" => "hire", "notes" => nil, "revised_by" => "seed", "change_percent" => nil }
       ])
+    end
+
+    describe "in a reporting currency (?report=)" do
+      it "adds the converted amount to every record, and the rates, date and source used" do
+        store_rates(Date.new(2026, 10, 9), "USD" => "1.10", "INR" => "92.40")
+        get "/api/v1/employees/#{employee.id}/compensations", params: { report: "USD" }
+
+        body = response.parsed_body
+        expect(body["data"].map { |r| [ r["amount"], r["currency"], r["converted"] ] }).to eq([
+          [ "98000.00", "USD", { "amount" => "98000.00", "currency" => "USD" } ],
+          [ "2000000.00", "INR", { "amount" => "23809.52", "currency" => "USD" } ],
+          [ "1800000.00", "INR", { "amount" => "21428.57", "currency" => "USD" } ]
+        ])
+        expect(body["data"].map { |r| r["change_percent"] }).to eq([ nil, "11.11", nil ]) # still from the original amounts
+        expect(body["meta"]["conversion"]).to eq(
+          "to" => "USD", "available" => true, "rate_date" => "2026-10-09", "source" => "ECB reference rates via Frankfurter",
+          "stale" => false, "rates" => [ { "currency" => "INR", "rate" => "0.0119047619" }, { "currency" => "USD", "rate" => "1.0" } ],
+          "missing" => []
+        )
+      end
+
+      it "leaves an amount unconverted, and names the currency, when there is no rate for it" do
+        store_rates(Date.new(2026, 10, 9), "USD" => "1.10")
+        get "/api/v1/employees/#{employee.id}/compensations", params: { report: "USD" }
+
+        expect(response.parsed_body["data"].map { |r| r["converted"] }).to eq([ { "amount" => "98000.00", "currency" => "USD" }, nil, nil ])
+        expect(response.parsed_body["meta"]["conversion"]["missing"]).to eq([ "INR" ])
+      end
+
+      it "says so when no rates have been fetched" do
+        get "/api/v1/employees/#{employee.id}/compensations", params: { report: "USD" }
+
+        expect(response.parsed_body["meta"]["conversion"]).to include("available" => false, "missing" => %w[INR USD])
+        expect(response.parsed_body["data"].map { |r| r["converted"] }).to all(be_nil)
+      end
+
+      it "rejects an unsupported currency" do
+        get "/api/v1/employees/#{employee.id}/compensations", params: { report: "XYZ" }
+
+        expect(response).to have_http_status(:bad_request)
+        expect(response.parsed_body["error"]["details"]).to eq("report" => [ "must be one of: USD, INR, GBP, EUR, CAD, AUD, SGD" ])
+      end
+
+      it "leaves the stored salaries unchanged" do
+        store_rates(Date.new(2026, 10, 9), "USD" => "1.10", "INR" => "92.40")
+
+        expect { get "/api/v1/employees/#{employee.id}/compensations", params: { report: "USD" } }
+          .not_to(change { Compensation.pluck(:amount, :currency).sort })
+      end
     end
 
     it "returns 404 for an unknown employee" do

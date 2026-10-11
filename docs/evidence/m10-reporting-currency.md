@@ -145,7 +145,36 @@ after a refresh: 2 rate queries; EUR→USD now 1.2
 backend: 301 examples, 0 failures · Line 1012/1012 (100%) · Branch 218/218 (100%) · rubocop 131 files, no offenses · brakeman 0 warnings
 ```
 
+## Employee page amounts in a reporting currency
+
+Sravan asked for the employee page's amounts to be shown in a chosen currency, with the rate-date picker deferred. Anyone who can open the page may switch it (URL `?report=`).
+
+| # | Criterion | Proof |
+|---|-----------|-------|
+| E1 | `?report=` adds the converted amount per record (exact, 2 dp half up), plus rates, date, source, stale flag and missing currencies; without it the response is unchanged; an unsupported currency → 400; stored salaries unchanged | `spec/services/fx/conversion_spec.rb`, `spec/requests/api/v1/compensations_spec.rb` |
+| E2 | The % change stays on the original amounts | request spec + UI test |
+| E3 | UI: "Show amounts in" choice; "In USD" column; profile "₹2,400,000 (≈ $28,571.43)"; provenance note; no-rate, stale and no-rates messages; back to original | `employee-currency.test.tsx` (7 tests) |
+| E4 | The history is fetched once per page (the page and the history section share it) | UI test (one request per view); found when the first version fetched it twice |
+
+```
+backend:  310 examples, 0 failures · Line 1037/1037 (100%) · Branch 236/236 (100%) · rubocop 133 files, no offenses
+frontend: 120 tests passed · lines 99.44% · branches 95.62% · eslint 0 problems · tsc OK
+```
+
+Browser (hr@, EMP-000001, temporary rates labelled "TEST RATES – not real", removed afterwards):
+
+```
+?report=USD
+PROFILE £76,500 (≈ $99,000)                                   (76,500 × 1.10 / 0.85 = 99,000)
+2023-11-18 → current    | £76,500 | $99,000    | +7.14%
+2021-01-05 → 2023-11-17 | £71,400 | $92,400    | +5.93%
+2018-02-22 → 2021-01-04 | £67,400 | $87,223.53 | +4.33%
+2015-04-12 → 2018-02-21 | £64,600 | $83,600    | —
+NOTE Converted to USD at TEST RATES – not real, rates of 2026-10-09: 1 GBP = 1.29412 USD. Indicative: today's rates are applied to every record, including past ones.
+```
+
 ## Screenshot
+- [`m10-employee-in-usd.png`](screenshots/m10-employee-in-usd.png): employee page with amounts in USD (TEST rates).
 - [`m10-converted-dashboard.png`](screenshots/m10-converted-dashboard.png): dashboard in USD, with the SGD exclusion notice and the provenance under each of the three converted charts (TEST rates).
 
 ## What this does not prove

@@ -69,4 +69,7 @@
 | Random jitter on the retry delay (Active Job default) | Spreads retries | **Reject** | One daily job: an exact "30 minutes later" is easier to read in logs and to test | Many jobs retrying at once |
 | Load rates into config once at boot | No DB reads at all | **Reject** (Sravan chose a version check) | New rates from the daily job (another process) would only appear after a restart | — |
 | In-memory rates with a fixed expiry (e.g. 1 hour) | No DB reads between expiries | **Reject** (Sravan chose a version check) | New rates could be up to an hour late. A one-row version query per request keeps them current | Version query shows up in profiling |
+| Pick the rate date for conversions | Reproduce a past report | **Defer** (Sravan: "will plan it if it comes as a requirement") | Latest cached rates cover the workflow | It becomes a requirement |
+| Convert past salary records at their own historical rates | "What was it worth then" | **Defer** | Needs the ECB rate for every effective date; today's rates are applied and labelled as such | Historical comparison is requested |
+| Convert amounts in the browser | Fewer API changes | **Reject** | JavaScript numbers are floating point; converting on the server keeps exact decimals and one rounding rule | — |
 | Retry every failed query 3× (TanStack default) | Resilience | **Reject** | GraphQL validation errors and 4xx fail identically every time; only network/5xx are retried, at most twice | — |

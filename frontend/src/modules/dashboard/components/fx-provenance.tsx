@@ -1,8 +1,6 @@
 import { Text } from '@mantine/core'
+import { shortRate } from '../../../shared/format-rate'
 import type { Converted } from '../types'
-
-/** Rates are exact on the server; shown with 6 significant digits (the exact value is in the tooltip). */
-const shortRate = (rate: string) => String(Number(Number(rate).toPrecision(6)))
 
 /**
  * Shown beside every converted figure: which rates, of which date, from which source.

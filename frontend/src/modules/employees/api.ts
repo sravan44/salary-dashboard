@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { getJson, sendJson } from '../../shared/api-client'
-import type { AuditEntry, DirectoryResponse, EmployeeCreate, EmployeeDetail, EmployeeUpdate, ReferenceData, SalaryChange, SalaryRecord, StatusChange } from './types'
+import type { AuditEntry, DirectoryResponse, EmployeeCreate, EmployeeDetail, EmployeeUpdate, HistoryConversion, ReferenceData, SalaryChange, SalaryHistoryData, SalaryRecord, StatusChange } from './types'
 import { isListKey } from './use-directory-filters'
 
 /** The page URL repeats keys (?country=IN&country=US); Rails reads lists as country[]=IN&country[]=US. */
@@ -60,10 +60,16 @@ function refreshAfterSave(queryClient: QueryClient, saved: EmployeeDetail) {
   void queryClient.invalidateQueries({ queryKey: ['dashboard-currency-detail'] })
 }
 
-export function useSalaryHistory(id: string) {
+/** The salary history; with a reporting currency, each record also carries its converted amount. */
+export function useSalaryHistory(id: string, report = '') {
   return useQuery({
-    queryKey: ['salary-history', id],
-    queryFn: async () => (await getJson<{ data: SalaryRecord[] }>(`/api/v1/employees/${id}/compensations`)).data,
+    queryKey: ['salary-history', id, report],
+    queryFn: async (): Promise<SalaryHistoryData> => {
+      const params = report ? new URLSearchParams({ report }) : undefined
+      const body = await getJson<{ data: SalaryRecord[]; meta?: { conversion: HistoryConversion } }>(`/api/v1/employees/${id}/compensations`, params)
+      return { records: body.data, conversion: body.meta?.conversion ?? null }
+    },
+    placeholderData: keepPreviousData,
   })
 }
 
