@@ -40,7 +40,25 @@ FX refresh failed: could not reach Frankfurter (Socket::ResolutionError). Existi
 exit=1
 ```
 
-**The live provider fetch is NOT RUN.** To complete it, run `bin/rails fx:refresh` once on a machine with internet access (Sravan's Mac terminal, or the deployed app) and record its output here.
+## Live refresh on Sravan's Mac (2026-10-11): found a bug, fixed, then passed
+
+**First run** (code as committed in `d400ed3`):
+```
+FX refresh failed: Frankfurter answered HTTP 301. Existing rates are unchanged.
+```
+The failure handling worked (clear message, cache kept), but the client didn't follow redirects. The stubbed specs couldn't catch this because they never returned a redirect. Two fixes, specs first:
+- follow up to 3 HTTPS-only redirects (relative or absolute);
+- keep a path in `FX_PROVIDER_URL`.
+
+**Second run** (with the fix), plus where the old address points:
+```
+$ bin/rails fx:refresh
+Stored 6 rates for 2026-10-09 (ECB reference rates via Frankfurter)
+$ curl -sI "https://api.frankfurter.app/latest?from=EUR&to=USD" | grep -i -E "^HTTP|^location"
+HTTP/2 301
+location: https://api.frankfurter.dev/v1/latest?from=EUR&to=USD
+```
+The default address is now `https://api.frankfurter.dev/v1`, so no redirect is needed; redirects are still followed if the provider moves again. **Live fetch: PASS.**
 
 ## Browser run on the 10k seed (signed in as viewer@)
 
@@ -73,6 +91,6 @@ Headcounts, minimums, medians and maximums match exactly. The only console error
 - [`m10-converted-dashboard.png`](screenshots/m10-converted-dashboard.png): dashboard in USD, with the SGD exclusion notice and the provenance under each of the three converted charts (TEST rates).
 
 ## What this does not prove
-- **A live fetch from Frankfurter: NOT RUN.** See above.
+- **The container start refresh against the live provider.** Not run in Docker; the live command itself passed on the Mac.
 - **The container start step (`fx:refresh` before the server): NOT RUN.** Docker Hub is blocked here.
 - **Payroll-grade FX.** Out of scope by design (A12): the figures are indicative reference-rate conversions.

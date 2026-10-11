@@ -4,7 +4,9 @@ module Fx
   # Fetches the latest reference rates from Frankfurter (https://frankfurter.dev): one request for
   # all currencies. Every failure (network, HTTP status, unexpected body) becomes a ProviderError.
   class FrankfurterClient
-    DEFAULT_URL = "https://api.frankfurter.app".freeze
+    # The old https://api.frankfurter.app now answers 301 to this address (seen in the live refresh).
+    DEFAULT_URL = "https://api.frankfurter.dev/v1".freeze
+    MAX_REDIRECTS = 3
     NETWORK_ERRORS = [ Timeout::Error, SystemCallError, SocketError, IOError, OpenSSL::SSL::SSLError ].freeze
 
     def initialize(base_url: ENV.fetch("FX_PROVIDER_URL", DEFAULT_URL), open_timeout: 3, read_timeout: 5)
@@ -15,9 +17,8 @@ module Fx
 
     # => { date: Date, rates: { "USD" => BigDecimal, ... } } where 1 base = rate quote.
     def latest(base:, symbols:)
-      path = "/latest?#{URI.encode_www_form(from: base, to: symbols.join(','))}"
-      response = Net::HTTP.start(@uri.host, @uri.port, use_ssl: @uri.scheme == "https",
-                                                       open_timeout: @open_timeout, read_timeout: @read_timeout) { |http| http.get(path) }
+      uri = URI("#{@uri.to_s.chomp('/')}/latest?#{URI.encode_www_form(from: base, to: symbols.join(','))}")
+      response = follow_redirects(uri)
       raise ProviderError, "Frankfurter answered HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
       parse(response.body, base)
@@ -26,6 +27,24 @@ module Fx
     end
 
     private
+
+    # The provider has moved before (the old address now answers 301), so a few HTTPS-only
+    # redirects are followed, relative or absolute.
+    def follow_redirects(uri)
+      (MAX_REDIRECTS + 1).times do
+        response = get(uri)
+        return response unless response.is_a?(Net::HTTPRedirection)
+
+        uri = URI.join(uri.to_s, response["location"])
+        raise ProviderError, "refused a redirect to a non-HTTPS address" unless uri.scheme == "https"
+      end
+      raise ProviderError, "too many redirects from Frankfurter"
+    end
+
+    def get(uri)
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+                                          open_timeout: @open_timeout, read_timeout: @read_timeout) { |http| http.get(uri.request_uri) }
+    end
 
     def parse(body, base)
       data = JSON.parse(body)
