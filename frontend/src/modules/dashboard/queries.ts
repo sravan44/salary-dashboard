@@ -27,3 +27,19 @@ export const DASHBOARD_CURRENCY_DETAIL = `
     }
   }
 `
+
+/** Salary charts in one reporting currency, with the provenance of every rate used (indicative only). */
+export const DASHBOARD_CONVERTED = `
+  query DashboardConverted($filters: DashboardFilters, $to: Currency!) {
+    dashboard(filters: $filters) {
+      converted(to: $to) {
+        reportingCurrency available rateDate source stale includedHeadcount
+        rates { currency rate rateDate source }
+        excludedCurrencies { currency headcount }
+        distribution(buckets: 10) { from to count }
+        byDepartment: payStats(groupBy: DEPARTMENT, limit: 20) { group headcount min max avg median }
+        byJobTitle: payStats(groupBy: JOB_TITLE, limit: 10) { group headcount min max avg median }
+      }
+    }
+  }
+`

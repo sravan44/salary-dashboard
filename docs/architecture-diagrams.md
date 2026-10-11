@@ -11,10 +11,10 @@ flowchart TB
   HR["👤 HR Manager<br/>ACME People team"]
   SYS["ACME Salary Insights<br/>Manage employee salaries and<br/>understand how ACME pays people"]
   XL["📄 Existing Excel sheets<br/>(replaced; import is future scope)"]
-  FX["🌐 Frankfurter<br/>reference FX rates<br/>(Phase 2 only)"]
+  FX["🌐 Frankfurter<br/>ECB reference FX rates<br/>(fetched by fx:refresh, cached)"]
   HR -->|searches, edits salaries,<br/>views charts| SYS
   XL -.->|future: CSV import| SYS
-  SYS -.->|Phase 2: daily rates, cached| FX
+  SYS -.->|refresh: one request, cached per date| FX
 ```
 
 ## 2. Containers (C4 level 2)

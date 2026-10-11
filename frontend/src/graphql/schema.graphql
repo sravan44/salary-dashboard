@@ -1,3 +1,46 @@
+"""
+Analytics converted into a reporting currency at cached reference rates. Stored salaries are never changed.
+"""
+type ConvertedDashboard {
+  """
+  False when no rates have been fetched yet
+  """
+  available: Boolean!
+  distribution(buckets: Int = 10): [SalaryBucket!]!
+
+  """
+  Employees left out: no rate for their currency
+  """
+  excludedCurrencies: [CurrencyHeadcount!]!
+  includedHeadcount: Int!
+  payStats(groupBy: PayGroupBy!, limit: Int = 50): [ConvertedPayStat!]!
+  rateDate: ISO8601Date
+
+  """
+  One per currency in the selection that could be converted
+  """
+  rates: [ExchangeRate!]!
+  reportingCurrency: Currency!
+  source: String
+
+  """
+  True when the rates are more than 7 days old
+  """
+  stale: Boolean!
+}
+
+"""
+Pay statistics in the reporting currency (each salary converted first, then aggregated)
+"""
+type ConvertedPayStat {
+  avg: String!
+  group: String!
+  headcount: Int!
+  max: String!
+  median: String!
+  min: String!
+}
+
 type Country {
   code: CountryCode!
   currency: Currency!
@@ -74,6 +117,10 @@ type CurrencyHeadcount {
 }
 
 type Dashboard {
+  """
+  Indicative analytics in one reporting currency, with the rate, date and source of every conversion
+  """
+  converted(to: Currency!): ConvertedDashboard!
   countriesCount: Int!
 
   """
@@ -165,6 +212,29 @@ type DepartmentHeadcount {
   department: String!
   headcount: Int!
 }
+
+"""
+The rate used to convert one currency: 1 `currency` = `rate` of the reporting currency
+"""
+type ExchangeRate {
+  currency: Currency!
+
+  """
+  Exact decimal string (10 dp)
+  """
+  rate: String!
+
+  """
+  The date the reference rate was published for
+  """
+  rateDate: ISO8601Date!
+  source: String!
+}
+
+"""
+An ISO 8601-encoded date
+"""
+scalar ISO8601Date @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
 
 """
 How to group salary statistics

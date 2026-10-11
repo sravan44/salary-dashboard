@@ -1,4 +1,5 @@
 import { Table } from '@mantine/core'
+import type { ReactNode } from 'react'
 import HighchartsReact from 'highcharts-react-official'
 import type { Options } from 'highcharts'
 import { formatMoney, formatMoneyCompact } from '../../../shared/format-money'
@@ -9,7 +10,7 @@ import { ChartCard } from './chart-card'
 const TYPES = ['Bar', 'Column'] as const
 type JobTitleType = (typeof TYPES)[number]
 
-function options(rows: PayStat[], currency: string, type: JobTitleType): Options {
+function options(rows: Omit<PayStat, 'currency'>[], currency: string, type: JobTitleType): Options {
   const seriesType = type === 'Bar' ? 'bar' : 'column'
   return {
     chart: { type: seriesType, height: type === 'Bar' ? rows.length * 32 + 70 : 340 },
@@ -37,10 +38,11 @@ function options(rows: PayStat[], currency: string, type: JobTitleType): Options
 }
 
 /** The ten largest job titles in the chosen currency, by median salary. */
-export function JobTitlePayChart({ rows, currency }: { rows: PayStat[]; currency: string }) {
+export function JobTitlePayChart({ rows, currency, label = currency, footer }: { rows: Omit<PayStat, 'currency'>[]; currency: string; label?: string; footer?: ReactNode }) {
   return (
     <ChartCard
-      title={`Median salary by job title (${currency})`}
+      title={`Median salary by job title (${label})`}
+      footer={footer}
       types={TYPES}
       empty={rows.length === 0 ? `No salaries in ${currency} for this selection.` : undefined}
       renderChart={(type) => <HighchartsReact key={type} highcharts={Highcharts} options={options(rows, currency, type)} />}

@@ -64,6 +64,13 @@ dashboard(filters: DashboardFilters): Dashboard!   # filters (lists, OR within /
   hiresByYear { year headcount }
   payStats(groupBy: COUNTRY|DEPARTMENT|JOB_TITLE, currency: Currency, limit: Int = 50) { group currency headcount min max avg median }
   distribution(currency: Currency!, buckets: Int = 10) { from to count }
+  converted(to: Currency!) {                        # indicative; each salary converted, then aggregated
+    reportingCurrency available rateDate source stale includedHeadcount
+    rates { currency rate rateDate source }         # 1 currency = rate × reportingCurrency (exact, 10 dp)
+    excludedCurrencies { currency headcount }       # no rate → left out, and named
+    payStats(groupBy:, limit:) { group headcount min max avg median }
+    distribution(buckets:) { from to count }
+  }
 reference: Reference!                               # countries, departments, currencies, jobTitles
 ```
 
@@ -73,6 +80,7 @@ reference: Reference!                               # countries, departments, cu
 | Max complexity | 200 (`payStats` costs its `limit`, `distribution` 20) | `Query has complexity of 301, which exceeds max complexity of 200` |
 | `limit` | 1–100 | `limit must be between 1 and 100` |
 | `buckets` | 5–20 | `buckets must be between 5 and 20` |
+| Converted figures | Same `limit` (1–100) and `buckets` (5–20) rules; read only from the `fx_rates` cache (the provider is never called during a query) | same messages |
 | Timeout | 5 s per query | `Timeout on Dashboard.<field>` |
 | Unknown enum value | rejected by the schema | `Argument 'country' … has an invalid value (XX)` |
 | Values per filter | ≤ 50 (a single value is accepted as a one-item list) | `jobTitle is too long (maximum is 50)` |

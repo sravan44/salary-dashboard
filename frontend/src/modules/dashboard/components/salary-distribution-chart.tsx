@@ -1,4 +1,5 @@
 import { Table } from '@mantine/core'
+import type { ReactNode } from 'react'
 import HighchartsReact from 'highcharts-react-official'
 import type { Options } from 'highcharts'
 import { formatMoney, formatMoneyCompact } from '../../../shared/format-money'
@@ -29,10 +30,11 @@ function distributionOptions(buckets: SalaryBucket[], currency: string, type: Di
   }
 }
 
-export function SalaryDistributionChart({ buckets, currency }: { buckets: SalaryBucket[]; currency: string }) {
+export function SalaryDistributionChart({ buckets, currency, label = currency, footer }: { buckets: SalaryBucket[]; currency: string; label?: string; footer?: ReactNode }) {
   return (
     <ChartCard
-      title={`Salary distribution (${currency})`}
+      title={`Salary distribution (${label})`}
+      footer={footer}
       types={DISTRIBUTION_TYPES}
       empty={buckets.length === 0 ? `No salaries in ${currency} for this selection.` : undefined}
       renderChart={(type) => <HighchartsReact key={type} highcharts={Highcharts} options={distributionOptions(buckets, currency, type)} />}

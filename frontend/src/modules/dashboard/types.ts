@@ -28,3 +28,22 @@ export type CurrencyDetailData = { dashboard: { distribution: SalaryBucket[]; by
 
 /** GraphQL DashboardFilters: lists (OR within a filter); department uses the enum name (e.g. CUSTOMER_SUPPORT). */
 export type DashboardFiltersInput = { country?: string[]; department?: string[]; jobTitle?: string[] }
+
+export type ExchangeRate = { currency: string; rate: string; rateDate: string; source: string }
+export type ConvertedPayStat = Omit<PayStat, 'currency'>
+
+/** Indicative analytics in one reporting currency; every rate used comes with its date and source. */
+export type Converted = {
+  reportingCurrency: string
+  available: boolean
+  rateDate: string | null
+  source: string | null
+  stale: boolean
+  includedHeadcount: number
+  rates: ExchangeRate[]
+  excludedCurrencies: CurrencyHeadcount[]
+  distribution: SalaryBucket[]
+  byDepartment: ConvertedPayStat[]
+  byJobTitle: ConvertedPayStat[]
+}
+export type ConvertedData = { dashboard: { converted: Converted } }

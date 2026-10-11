@@ -80,6 +80,75 @@ RSpec.describe "GraphQL API" do
     end
   end
 
+  describe "reporting-currency conversion" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    around { |example| travel_to(Date.new(2026, 10, 10)) { example.run } }
+
+    before { create_insights_fixture }
+
+    let(:query) do
+      <<~GQL
+        query($to: Currency!) {
+          dashboard {
+            converted(to: $to) {
+              reportingCurrency available rateDate source stale includedHeadcount
+              rates { currency rate rateDate source }
+              excludedCurrencies { currency headcount }
+              payStats(groupBy: DEPARTMENT, limit: 10) { group headcount min max avg median }
+              distribution(buckets: 5) { from to count }
+            }
+          }
+        }
+      GQL
+    end
+
+    def converted(to = "USD") = graphql(query, variables: { to: }).dig("data", "dashboard", "converted")
+
+    it "returns converted figures with the rate, date and source of every currency used" do
+      store_rates(Date.new(2026, 10, 9), "USD" => "1.10", "INR" => "92.40")
+
+      result = converted
+      expect(result).to include(
+        "reportingCurrency" => "USD", "available" => true, "rateDate" => "2026-10-09",
+        "source" => "ECB reference rates via Frankfurter", "stale" => false, "includedHeadcount" => 6, "excludedCurrencies" => []
+      )
+      expect(result["rates"].map { |r| [ r["currency"], r["rate"], r["rateDate"] ] })
+        .to eq([ [ "EUR", "1.1", "2026-10-09" ], [ "INR", "0.0119047619", "2026-10-09" ], [ "USD", "1.0", "2026-10-09" ] ])
+      expect(result["payStats"].first).to eq("group" => "Engineering", "headcount" => 3, "min" => "28571.43",
+                                             "max" => "120000.00", "avg" => "82857.14", "median" => "100000.00")
+      expect(result["distribution"].sum { |b| b["count"] }).to eq(6)
+    end
+
+    it "says plainly when no rates have been fetched, and converts nothing" do
+      result = converted
+
+      expect(result).to include("available" => false, "rateDate" => nil, "source" => nil, "rates" => [], "payStats" => [],
+                                "distribution" => [], "includedHeadcount" => 0)
+      expect(result["excludedCurrencies"].sum { |c| c["headcount"] }).to eq(6)
+    end
+
+    it "flags rates older than 7 days as stale" do
+      store_rates(Date.new(2026, 10, 1), "USD" => "1.10", "INR" => "92.40")
+
+      expect(converted["stale"]).to be(true)
+    end
+
+    it "applies the same limits as the rest of the dashboard" do
+      body = graphql('{ dashboard { converted(to: USD) { payStats(groupBy: COUNTRY, limit: 101) { group } } } }')
+      expect(error_messages(body)).to include("limit must be between 1 and 100")
+
+      body = graphql('{ dashboard { converted(to: USD) { distribution(buckets: 30) { count } } } }')
+      expect(error_messages(body)).to include("buckets must be between 5 and 20")
+    end
+
+    it "is open to every signed-in role, like the rest of the dashboard" do
+      store_rates(Date.new(2026, 10, 9), "USD" => "1.10", "INR" => "92.40")
+
+      expect(converted["available"]).to be(true) # signed in as a viewer in this file
+    end
+  end
+
   describe "validation and limits" do
     it "rejects unknown filter values in the schema itself" do
       body = graphql('{ dashboard(filters: { country: XX }) { headcount } }')

@@ -103,9 +103,36 @@ export const currencyDetail = {
   ],
 }
 
+/** Converted analytics in USD at rates of 2026-10-09 (EUR base: 1 EUR = 1.10 USD = 92.40 INR). */
+export const convertedUsd = {
+  reportingCurrency: 'USD',
+  available: true,
+  rateDate: '2026-10-09',
+  source: 'ECB reference rates via Frankfurter',
+  stale: false,
+  includedHeadcount: 9000,
+  rates: [
+    { currency: 'EUR', rate: '1.1', rateDate: '2026-10-09', source: 'ECB reference rates via Frankfurter' },
+    { currency: 'INR', rate: '0.0119047619', rateDate: '2026-10-09', source: 'ECB reference rates via Frankfurter' },
+    { currency: 'USD', rate: '1.0', rateDate: '2026-10-09', source: 'ECB reference rates via Frankfurter' },
+  ],
+  excludedCurrencies: [] as { currency: string; headcount: number }[],
+  distribution: [
+    { from: '20000.00', to: '60000.00', count: 4000 },
+    { from: '60000.00', to: '100000.00', count: 5000 },
+  ],
+  byDepartment: [{ group: 'Engineering', headcount: 2700, min: '18000.00', max: '240000.00', avg: '96000.00', median: '88000.00' }],
+  byJobTitle: [{ group: 'Staff Engineer', headcount: 400, min: '60000.00', max: '238000.00', avg: '150000.00', median: '148000.00' }],
+}
+
 type GraphqlReply = { data?: Record<string, unknown>; errors?: { message: string }[] }
 let overviewResponder: (variables: Record<string, unknown>) => GraphqlReply = () => ({ data: { dashboard: overview, reference: dashboardReference } })
 let detailResponder: (variables: Record<string, unknown>) => GraphqlReply = () => ({ data: { dashboard: currencyDetail } })
+
+let convertedResponder: (variables: Record<string, unknown>) => GraphqlReply = () => ({ data: { dashboard: { converted: convertedUsd } } })
+export function respondToConverted(responder: typeof convertedResponder) {
+  convertedResponder = responder
+}
 
 export function respondToOverview(responder: typeof overviewResponder) {
   overviewResponder = responder
@@ -325,6 +352,10 @@ export const server = setupServer(
     graphqlCalls.push({ operation: 'DashboardOverview', variables })
     return HttpResponse.json(overviewResponder(variables))
   }),
+  graphql.query('DashboardConverted', ({ variables }) => {
+    graphqlCalls.push({ operation: 'DashboardConverted', variables })
+    return HttpResponse.json(convertedResponder(variables))
+  }),
   graphql.query('DashboardCurrencyDetail', ({ variables }) => {
     graphqlCalls.push({ operation: 'DashboardCurrencyDetail', variables })
     return HttpResponse.json(detailResponder(variables))
@@ -355,6 +386,7 @@ export function resetApiMock() {
   graphqlCalls.length = 0
   respondToOverview(() => ({ data: { dashboard: overview, reference: dashboardReference } }))
   respondToCurrencyDetail(() => ({ data: { dashboard: currencyDetail } }))
+  respondToConverted(() => ({ data: { dashboard: { converted: convertedUsd } } }))
   directoryRequests.length = 0
   respondToDirectory(() => ({
     body: { data: [asha, james], meta: { page: 1, per_page: 25, total: 2, total_pages: 1 } },

@@ -59,6 +59,14 @@ EMAIL=you@example.com ROLES=admin,hr_manager PASSWORD=<12+ chars> bin/rails user
 ```
 After that, an Admin adds people and changes roles on the **Users** page.
 
+## Exchange rates (reporting currency)
+
+```bash
+cd backend
+bin/rails fx:refresh     # one request to Frankfurter (ECB reference rates); cached in fx_rates; safe to re-run
+```
+The Docker image runs this on start; if the provider can't be reached, the app still starts and uses the cached rates. On the dashboard, **Reporting currency** converts every salary at those rates (indicative only) and shows the rate, date and source under each converted chart. `FX_PROVIDER_URL` overrides the provider address (default `https://api.frankfurter.app`).
+
 ## Seed data
 
 ```bash

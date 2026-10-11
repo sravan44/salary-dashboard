@@ -10,7 +10,7 @@ Starting from the HR Manager's pain ("salaries live in Excel and I can't answer 
 |-----|---------------------|--------------|--------------------|
 | **Find** people quickly | 10,000 rows searchable and filterable in under a second | Combining filters and pagination without loading everything | SQL query object + indexes (M3, M8) |
 | **Change** pay safely | A salary edit never loses history and never half-applies | Effective dates, one current salary, concurrent edits | Append-only records + transaction + row lock + partial unique index (M5) |
-| **Understand** pay | Answers are correct and not misleading | Multiple currencies; median is not a simple SQL aggregate | Group by currency, `percentile_cont`, one currency per chart (M6) |
+| **Understand** pay | Answers are correct and not misleading | Multiple currencies; median is not a simple SQL aggregate | Group by currency, exact median, one currency per chart (M6); a reporting currency at named reference rates (M10) |
 
 Everything else (auth, seed, deploy) supports these three jobs.
 
@@ -72,8 +72,8 @@ UX choices:
 | Append-only `compensations` with `effective_from/to` | `salary` column on employee; audit-log table | History is a first-class business need, not an audit afterthought. The "current" record is cheap to find with a partial index. |
 | Partial unique index `(employee_id) WHERE effective_to IS NULL` | App-level check only | The database guarantees at most one current salary, even under a race. |
 | `SELECT … FOR UPDATE` on the employee during a change | Optimistic locking | Rare writes from a single HR user, so a simple pessimistic lock is enough. |
-| Group every aggregate by currency | Convert to USD | No FX policy exists yet. Conversion is Phase 2 with dated rates. |
-| Median via `percentile_cont(0.5)` in Postgres | Compute in Ruby | Keeps 10k amounts in the database; one query per chart. |
+| Group every aggregate by currency | Convert to USD | No FX policy exists yet. *Update:* conversion was added in M10 as an explicit, indicative reporting-currency view with dated, sourced rates; per-currency figures stay the default. |
+| Median in Postgres | Compute in Ruby | Keeps 10k amounts in the database; one query per chart. *Update:* built with `ROW_NUMBER` in numeric arithmetic instead of `percentile_cont`, which goes through floating point (see rejected-suggestions). |
 | Histogram via `width_bucket` | Client-side binning | The browser gets about 10 rows, not 10,000 salaries. |
 | Static reference list (countries, currencies, departments) | Lookup tables + admin UI | Nobody needs to edit them yet; one validated source. |
 | Rails serves the built SPA | Separate frontend host | One deploy, same-origin cookie auth, no CORS. |
@@ -98,7 +98,7 @@ UX choices:
 | Day 1 PM | M2 schema + seed → M3 search and filter directory |
 | Day 2 AM | M4 employee management → M5 salary history → M6 insights and charts |
 | Day 2 PM | M7 auth/security → M8 performance → M9 deploy + demo |
-| If time | M10 FX (Phase 2) → M11 final review → optional K8s templates |
+| If time | M11 final review → optional K8s templates. *Update:* M10 FX was brought forward before M8 (assessment workflow 4). |
 
 ## 6. Testing strategy
 

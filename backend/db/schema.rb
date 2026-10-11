@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_160516) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_10_225620) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -47,6 +47,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_160516) do
     t.index ["email"], name: "index_employees_on_email", unique: true
     t.index ["employee_number"], name: "index_employees_on_employee_number", unique: true
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'terminated'::character varying::text])", name: "employees_status_known"
+  end
+
+  create_table "fx_rates", force: :cascade do |t|
+    t.string "base", limit: 3, null: false
+    t.string "quote", limit: 3, null: false
+    t.date "rate_date", null: false
+    t.decimal "rate", precision: 20, scale: 10, null: false
+    t.string "source", null: false
+    t.datetime "fetched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["base", "quote", "rate_date"], name: "index_fx_rates_on_base_and_quote_and_rate_date", unique: true
+    t.check_constraint "rate > 0::numeric", name: "fx_rates_rate_positive"
   end
 
   create_table "sessions", force: :cascade do |t|

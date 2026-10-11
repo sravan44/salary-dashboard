@@ -4,7 +4,7 @@
 |------------|-----------------------|----------|--------|--------------|
 | Split employees / salary / future paystubs into microservices | Future HR domains differ | **Reject** (MVP) | No independent scaling or ownership need; adds deployment and consistency cost | A real service boundary appears |
 | Single "total payroll" headline summing all salaries | An eye-catching dashboard number | **Reject** | Summing INR + USD is meaningless | Phase 2 FX with an explicit reporting currency and rate date |
-| Build FX conversion alongside the core features | The playbook addendum includes it in the MVP | **Defer** to Phase 2 | Sravan: core requirements first; FX is extra scope | After M9 |
+| Build FX conversion alongside the core features | The playbook addendum includes it in the MVP | **Deferred, then brought forward** (M10, before M8) | First deferred so the core came first; brought forward once it was clear the assessment's workflow 4 requires a reporting currency with rate provenance | — |
 | SQLite (suggested in the brief) | Zero setup | **Reject** | No `percentile_cont`, weaker constraints, differs from prod | — |
 | Store `current_salary` on `employees` | Faster reads | **Reject** | Duplicates truth; the partial index on `effective_to IS NULL` makes the join cheap | Measured bottleneck |
 | One salary chart mixing all currencies (e.g. avg salary by country on one axis) | Simplest-looking chart | **Reject** | Bars in INR next to bars in USD on one axis mislead | Phase 2 FX reporting currency |
@@ -59,4 +59,8 @@
 | Store the % change on each salary record | Faster reads | **Reject** | It is derived from two rows; storing it could drift. Computed when reading, and left empty across currencies | — |
 | Edit or delete a wrong salary record | Fix typos quickly | **Reject** | History is append-only (A5): a mistake is fixed by a new record with reason "correction", so the audit trail stays complete | Formal correction workflow with approvals |
 | Rely only on the "one current salary" index for concurrent changes | The database already refuses two current records | **Reject** | It turns a race into a crash. Shown in testing: without the row lock, the parallel spec failed 1 run in 3 with `RecordNotUnique`; with `Employee.lock` it passed 5 out of 5. The index stays as the last line of defence | — |
+| Convert only the per-currency aggregates (e.g. convert each currency's median) | Simpler SQL | **Reject** | The median of medians is not the median: a group spanning INR and GBP needs each salary converted first | — |
+| Call the FX provider while the dashboard loads | Always-fresh rates | **Reject** | Slow, flaky and impossible to reproduce. A refresh caches dated rates; queries read only the cache, so the same data and date always give the same figures | — |
+| Ship a bundled rate file as if it were real ECB data | Demo works without network | **Reject** | Rates presented as real must come from the source. Specs use stubbed rates; the evidence uses rates labelled "TEST RATES – not real" | — |
+| Silently convert with the nearest available rate when a currency has none | No gaps in charts | **Reject** | Hides an error. Those employees are left out and named on the page | A fallback-rate policy is agreed |
 | Retry every failed query 3× (TanStack default) | Resilience | **Reject** | GraphQL validation errors and 4xx fail identically every time; only network/5xx are retried, at most twice | — |

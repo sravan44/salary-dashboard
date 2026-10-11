@@ -25,6 +25,13 @@ module Types
       argument :buckets, Integer, required: false, default_value: 10
     end
 
+    field :converted, ConvertedDashboardType, null: false do
+      description "Indicative analytics in one reporting currency, with the rate, date and source of every conversion"
+      argument :to, CurrencyEnum, required: true
+    end
+
+    def converted(to:) = { population: object, to:, snapshot: Fx::Snapshot.latest(as_of: Date.current) }
+
     def headcount = summary.headcount
     def countries_count = summary.countries_count
     def currencies = summary.currencies

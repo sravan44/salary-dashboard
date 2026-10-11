@@ -44,6 +44,9 @@ export function useDashboardFilters() {
     /** The salary charts' currency: always exactly one, never several. */
     currency: searchParams.get('currency') ?? '',
     setCurrency: (currency: string) => change('currency', [currency]),
+    /** The reporting currency for converted analytics; empty = original currencies (no conversion). */
+    reportCurrency: searchParams.get('report') ?? '',
+    setReportCurrency: (currency: string) => change('report', [currency]),
     clear,
     filters,
     hasFilters: Object.keys(filters).length > 0,

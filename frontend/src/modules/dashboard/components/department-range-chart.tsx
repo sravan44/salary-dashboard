@@ -1,4 +1,5 @@
 import { Table } from '@mantine/core'
+import type { ReactNode } from 'react'
 import HighchartsReact from 'highcharts-react-official'
 import type { Options } from 'highcharts'
 import { formatMoney, formatMoneyCompact } from '../../../shared/format-money'
@@ -10,7 +11,7 @@ const DEPARTMENT_TYPES = ['Range', 'Median'] as const
 type DepartmentType = (typeof DEPARTMENT_TYPES)[number]
 
 /** Range: a thin min–max bar with the median as a dot. Median: one column per department. */
-function departmentOptions(rows: PayStat[], currency: string, type: DepartmentType): Options {
+function departmentOptions(rows: Omit<PayStat, 'currency'>[], currency: string, type: DepartmentType): Options {
   const detail = rows.map((r) => `${formatMoney(r.min, currency)} – ${formatMoney(r.max, currency)} · ${r.headcount.toLocaleString('en-US')} employees`)
   const medians = rows.map((r, i) => ({ y: Number(r.median), custom: { median: formatMoney(r.median, currency), detail: detail[i] } }))
   const base: Options = {
@@ -56,10 +57,11 @@ function departmentOptions(rows: PayStat[], currency: string, type: DepartmentTy
   }
 }
 
-export function DepartmentRangeChart({ rows, currency }: { rows: PayStat[]; currency: string }) {
+export function DepartmentRangeChart({ rows, currency, label = currency, footer }: { rows: Omit<PayStat, 'currency'>[]; currency: string; label?: string; footer?: ReactNode }) {
   return (
     <ChartCard
-      title={`Median and range by department (${currency})`}
+      title={`Median and range by department (${label})`}
+      footer={footer}
       types={DEPARTMENT_TYPES}
       empty={rows.length === 0 ? `No salaries in ${currency} for this selection.` : undefined}
       renderChart={(type) => <HighchartsReact key={type} highcharts={Highcharts} options={departmentOptions(rows, currency, type)} />}
