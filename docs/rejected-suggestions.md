@@ -63,4 +63,10 @@
 | Call the FX provider while the dashboard loads | Always-fresh rates | **Reject** | Slow, flaky and impossible to reproduce. A refresh caches dated rates; queries read only the cache, so the same data and date always give the same figures | — |
 | Ship a bundled rate file as if it were real ECB data | Demo works without network | **Reject** | Rates presented as real must come from the source. Specs use stubbed rates; the evidence uses rates labelled "TEST RATES – not real" | — |
 | Silently convert with the nearest available rate when a currency has none | No gaps in charts | **Reject** | Hides an error. Those employees are left out and named on the page | A fallback-rate policy is agreed |
+| Cron inside the container for the rate refresh | Simple | **Reject** (Sravan chose Solid Queue) | Needs a cron daemon in the image and gives no retries or job history | — |
+| Sidekiq + Redis for background jobs | Popular | **Reject** | A second service for one daily job. Solid Queue (Rails 8 default) stores jobs in PostgreSQL and runs inside Puma | Many jobs or high throughput |
+| A separate queue database (the installer's default) | Isolation | **Reject** | One container and one database are simpler to run and back up; the Solid Queue tables are a normal migration | Queue load affects the app database |
+| Random jitter on the retry delay (Active Job default) | Spreads retries | **Reject** | One daily job: an exact "30 minutes later" is easier to read in logs and to test | Many jobs retrying at once |
+| Load rates into config once at boot | No DB reads at all | **Reject** (Sravan chose a version check) | New rates from the daily job (another process) would only appear after a restart | — |
+| In-memory rates with a fixed expiry (e.g. 1 hour) | No DB reads between expiries | **Reject** (Sravan chose a version check) | New rates could be up to an hour late. A one-row version query per request keeps them current | Version query shows up in profiling |
 | Retry every failed query 3× (TanStack default) | Resilience | **Reject** | GraphQL validation errors and 4xx fail identically every time; only network/5xx are retried, at most twice | — |

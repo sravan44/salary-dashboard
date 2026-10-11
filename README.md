@@ -65,7 +65,7 @@ After that, an Admin adds people and changes roles on the **Users** page.
 cd backend
 bin/rails fx:refresh     # one request to Frankfurter (ECB reference rates); cached in fx_rates; safe to re-run
 ```
-The Docker image runs this on start; if the provider can't be reached, the app still starts and uses the cached rates. On the dashboard, **Reporting currency** converts every salary at those rates (indicative only) and shows the rate, date and source under each converted chart. `FX_PROVIDER_URL` overrides the provider address (default `https://api.frankfurter.dev/v1`; HTTPS redirects are followed, up to 3).
+**Kept in sync automatically:** `FxRefreshJob` runs every weekday at 16:30 Frankfurt time (after the ECB publishes; `config/recurring.yml`) through **Solid Queue**, which runs inside Puma in the same container and stores its jobs in the same PostgreSQL database (no Redis, no second service). A provider failure is retried twice, 30 minutes apart; after that the cached rates stay, and the dashboard flags them as stale once they're more than 7 days old. The Docker image also refreshes once on start; if the provider can't be reached, the app still starts. Set `SOLID_QUEUE_IN_PUMA=false` to run `bin/jobs` as a separate process instead. Each app process keeps the rates in memory: a request costs one tiny version query, and the rates are re-read only after a refresh. On the dashboard, **Reporting currency** converts every salary at those rates (indicative only) and shows the rate, date and source under each converted chart. `FX_PROVIDER_URL` overrides the provider address (default `https://api.frankfurter.dev/v1`; HTTPS redirects are followed, up to 3).
 
 ## Seed data
 

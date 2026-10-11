@@ -87,6 +87,64 @@ SGD (excluded): 403
 
 Headcounts, minimums, medians and maximums match exactly. The only console error was the expected 401 from the signed-out session check.
 
+## Keeping rates in sync (Solid Queue recurring job)
+
+Sravan asked for a scheduled sync and chose Solid Queue. It came from his rbenv cache, with SHA-256 verified on both sides:
+- `solid_queue-1.7.0` `6566b70b…cd20c`
+- `fugit-1.14.0` `e311a9cc…f37e`
+- `et-orbi-1.4.2` `bb555dae…cd20c`
+- `raabro-1.5.0` `3f998a7b…440a`
+
+| # | Criterion | Proof |
+|---|-----------|-------|
+| S1 | `FxRefreshJob` refreshes the cache | `spec/jobs/fx_refresh_job_spec.rb` |
+| S2 | A provider error retries exactly 30 min later (no jitter); the cache is kept meanwhile | same spec |
+| S3 | After 3 attempts it stops, logs why, and changes nothing | same spec (3 provider calls, error logged, queue empty) |
+| S4 | Schedule: weekdays 16:30 Europe/Berlin in development and production; Solid Queue accepts it | `spec/config/recurring_schedule_spec.rb` (from Fri 17:00 the next run is Mon 16:30) |
+| S5 | Runs inside Puma in the one container; tables in the same PostgreSQL database | real run below |
+
+```
+backend: 297 examples, 0 failures · Line 1003/1003 (100%) · Branch 216/216 (100%)
+         rubocop 131 files, no offenses · brakeman 0 warnings · bundler-audit: no vulnerabilities
+frontend: unchanged by this step (not re-run)
+```
+
+**Real run** (dev server; Solid Queue started by the Puma plugin):
+
+```
+processes: ["Dispatcher", "Scheduler", "Supervisor(fork)", "Worker"]
+recurring: refresh_exchange_rates | 30 16 * * 1-5 Europe/Berlin | FxRefreshJob
+recurring: clear_solid_queue_finished_jobs | every hour at minute 12 | SolidQueue::Job.clear_finished_in_batches(...)
+FxRefreshJob.perform_later at 02:13:42Z
+job 1  ran 02:13:42, finished
+job 2  scheduled_at 02:43:43 (retry 1)   ← exactly 30 minutes later
+log: Retrying FxRefreshJob … after 1 attempts in 1800 seconds, due to a Fx::ProviderError (could not reach Frankfurter (Socket::ResolutionError)).
+```
+
+The retry is expected here, because the provider is blocked in this workspace. The successful live fetch is the Mac run above. The local queue was cleared afterwards.
+
+## Rates kept in memory (version check)
+
+Sravan asked not to read the rates from the database every time, and chose "check a version, reload on change". Each app process keeps the latest snapshot in memory. Each request runs one tiny version query (`MAX(rate_date), MAX(fetched_at)`); the rates are re-read only when that changes, e.g. after the scheduled refresh (another process).
+
+| # | Criterion | Proof |
+|---|-----------|-------|
+| C1 | First request: version + rates (2 queries); later requests: version only (1) | `spec/services/fx/snapshot_spec.rb` (counts SQL statements) |
+| C2 | A refresh (same date, new fetch time) or a new rate date is picked up on the next request | same spec |
+| C3 | Staleness is still judged against each request's date | same spec |
+
+Real check on the dev database (temporary TEST rates, removed afterwards):
+```
+request 1: 2 rate queries
+request 2: 1 rate queries
+request 3: 1 rate queries
+after a refresh: 2 rate queries; EUR→USD now 1.2
+```
+
+```
+backend: 301 examples, 0 failures · Line 1012/1012 (100%) · Branch 218/218 (100%) · rubocop 131 files, no offenses · brakeman 0 warnings
+```
+
 ## Screenshot
 - [`m10-converted-dashboard.png`](screenshots/m10-converted-dashboard.png): dashboard in USD, with the SGD exclusion notice and the provenance under each of the three converted charts (TEST rates).
 

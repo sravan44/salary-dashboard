@@ -7,13 +7,31 @@ module Fx
 
     attr_reader :rate_date, :source
 
+    MEMORY_LOCK = Mutex.new
+
+    # Each request runs one cheap query (latest rate date and fetch time). The rates themselves are
+    # kept in memory and re-read only when that version changes, e.g. after the scheduled refresh,
+    # which runs in another process and so cannot clear this copy directly.
     def self.latest(as_of: Date.current)
-      date = FxRate.where(base: BASE).where(rate_date: ..as_of).maximum(:rate_date)
+      date, fetched_at = FxRate.where(base: BASE, rate_date: ..as_of).pick(Arel.sql("MAX(rate_date)"), Arel.sql("MAX(fetched_at)"))
       return nil unless date
 
-      rows = FxRate.where(base: BASE, rate_date: date)
-      new(rate_date: date, as_of:, per_euro: rows.pluck(:quote, :rate).to_h, source: rows.pick(:source))
+      data = remembered([ date, fetched_at ]) do
+        rows = FxRate.where(base: BASE, rate_date: date).pluck(:quote, :rate, :source)
+        { per_euro: rows.to_h { |quote, rate, _| [ quote, rate ] }, source: rows.first.last } # a date always has rows
+      end
+      new(rate_date: date, as_of:, **data)
     end
+
+    def self.clear_memory! = MEMORY_LOCK.synchronize { @memory = nil }
+
+    def self.remembered(version)
+      MEMORY_LOCK.synchronize do
+        @memory = { version:, data: yield } unless @memory && @memory[:version] == version
+        @memory[:data]
+      end
+    end
+    private_class_method :remembered
 
     def initialize(rate_date:, as_of:, per_euro:, source:)
       @rate_date = rate_date

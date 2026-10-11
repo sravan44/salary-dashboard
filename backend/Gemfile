@@ -18,6 +18,8 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 gem "graphql", "~> 2.6"
+# Background jobs and the recurring rate refresh, stored in PostgreSQL (no Redis); runs inside Puma.
+gem "solid_queue", "~> 1.7"
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"

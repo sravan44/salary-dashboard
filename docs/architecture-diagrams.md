@@ -27,12 +27,15 @@ flowchart LR
   subgraph APP["Single app container (production)"]
     direction TB
     STATIC["public/<br/>built SPA assets"]
-    API["Rails 8.1 API<br/>/api/v1/*<br/>session cookie auth"]
+    API["Rails 8.1 API<br/>/api/v1/* · /graphql<br/>session cookie auth"]
+    JOBS["Solid Queue (inside Puma)<br/>FxRefreshJob weekdays 16:30 CET"]
   end
   DB[("PostgreSQL 16<br/>employees · compensations · users")]
   B -->|GET / , assets| STATIC
   B -->|JSON over HTTPS<br/>same origin| API
   API -->|ActiveRecord / SQL| DB
+  JOBS -->|jobs + fx_rates| DB
+  JOBS -.->|HTTPS, once per refresh| FXP["Frankfurter<br/>ECB reference rates"]
 ```
 
 ## 3. Backend components (C4 level 3)

@@ -23,4 +23,8 @@ module FxHelpers
   end
 end
 
-RSpec.configure { |config| config.include FxHelpers }
+RSpec.configure do |config|
+  config.include FxHelpers
+  # The in-memory rate copy belongs to the process; every example starts without one.
+  config.before { Fx::Snapshot.clear_memory! }
+end
