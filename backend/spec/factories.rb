@@ -22,6 +22,7 @@ FactoryBot.define do
   factory :user do
     sequence(:email) { |n| "user#{n}@acme.example" }
     password { "correct horse battery" }
+    password_changed_at { Time.current }
     roles { [ "viewer" ] }
   end
 end

@@ -15,7 +15,8 @@ RSpec.describe "Sign-in sessions API" do
     expect(response).to have_http_status(:created)
     expect(response.parsed_body["data"]).to eq(
       "id" => user.id, "email" => "hr@acme.example", "roles" => %w[hr_manager],
-      "permissions" => { "view_dashboard" => true, "manage_employees" => true, "manage_users" => false }
+      "permissions" => { "view_dashboard" => true, "manage_employees" => true, "manage_users" => false },
+      "email_inbox" => false
     )
     cookie = response.headers["Set-Cookie"]
     expect(cookie).to match(/session_token=/).and match(/httponly/i).and match(/samesite=lax/i)

@@ -34,6 +34,11 @@ Every `/api/v1/*` and `/graphql` request needs a signed-in user, except `POST /s
 
 - `POST /session` `{ email, password }` → **201** `{ data: { id, email, roles, permissions: { view_dashboard, manage_employees, manage_users } } }`; **401** `invalid_credentials` (same answer for an unknown email and a wrong password); **429** `too_many_attempts` after 10 attempts in 3 minutes from one IP.
 - `GET /session` → the signed-in user, or **401** `unauthenticated`. `DELETE /session` → **204**; the token stops working at once.
+
+**Passwords (M12).** Links in emails carry a signed token after `#` (`/reset-password#token=…`), so it never reaches the server's request logs. A reset link lasts 2 hours, a new user's set-password link 24 hours; any password change makes every earlier link stop working. Every password change records `password_changed_at` in the audit log (never the password or its digest) and signs the user out of their other sessions.
+- `POST /password_reset` `{ email }` (signed out) → **202** `{ data: { message } }`, the same answer whether or not the email has an account; emails a reset link when it has. **429** after 5 requests in 15 minutes from one IP.
+- `PATCH /password_reset` `{ token, password, password_confirmation }` (signed out) → **204**; accepts a reset or a set-password token. **422** `invalid_token` (expired, used or made up), or field errors (`password`, `password_confirmation`). **429** after 10 attempts in 15 minutes from one IP (counted separately from requests).
+- `PATCH /password` `{ current_password, password, password_confirmation }` (signed in) → **204**; this session stays, others end. **422** `current_password: ["is incorrect"]` or field errors.
 - Not signed in → **401** `unauthenticated`. Signed in without the right role → **403** `forbidden`.
 
 | Endpoint | Viewer | HR manager | Admin |
@@ -41,10 +46,14 @@ Every `/api/v1/*` and `/graphql` request needs a signed-in user, except `POST /s
 | `POST /graphql` (dashboard), `GET /reference` | ✓ | ✓ | ✓ |
 | `/employees` (list, profile, create, edit) | 403 | ✓ | 403 (unless also HR manager) |
 | `/users` (list, create, change roles) | 403 | 403 | ✓ |
+| `/exchange_rates` (list, sync) | 403 | 403 | ✓ |
+| `/letter_opener` (demo email inbox, when on) | hidden | hidden | ✓ |
 
 ### Users (Admin)
-- `GET /users` → `{ data: [{ id, email, roles, created_at }] }`, by email. Never includes password data.
-- `POST /users` `{ user: { email, roles: [...], password } }` → **201**. The password must be 12–72 characters, and there must be at least one known role. Otherwise **422** with field errors.
+- `GET /users` → `{ data: [{ id, email, roles, password_set, created_at }] }`, by email. `password_set` is false for an invited user who hasn't used their link yet. Never includes password data.
+- `POST /users` `{ user: { email, roles: [...], password? } }` → **201**. With a password (12–72 characters) it is set directly; without one, the account has no usable password until a link is sent (`password_set: false`). Nothing is emailed on creation. At least one known role. Otherwise **422** with field errors.
+- `PATCH /users/:id/password` `{ password, password_confirmation }` (Admin) → **200** the user; signs them out everywhere. **422** field errors.
+- `POST /users/password_links` `{ user_ids: [...] }` (Admin) → **202** `{ data: { sent } }`; emails each user a set-password link (no password yet, 24 h) or a reset link (2 h). 1–50 distinct users, else **422** `user_ids`; **404** (nothing sent) if any user doesn't exist.
 - `PATCH /users/:id` `{ user: { roles: [...] } }` → **200**. Only roles change here. **422** `roles` if it would remove your own Admin role, or the last Admin's. Role changes are audited (`whodunnit` = the admin's email); password digests never enter the audit log.
 
 ## Compensation (HR manager only)
@@ -90,8 +99,12 @@ reference: Reference!                               # countries, departments, cu
 
 **GraphiQL:** `GET /graphiql` (only when `GRAPHIQL_ENABLED=true`), bundled from npm, not loaded from a CDN.
 
+### Exchange rates (Admin)
+- `GET /exchange_rates` → `{ data: { base: "EUR", rate_date, source, fetched_at, stale, rates: [{ currency, rate }] } }`: the latest cached snapshot, 1 EUR in each currency (exact decimal strings), by currency. `stale` after 7 days. Before the first fetch: nulls and `rates: []`.
+- `POST /exchange_rates/sync` → **200** the new snapshot plus `stored`; fetches from the provider now (the weekday schedule keeps running). **502** `provider_unavailable` if the provider fails; the cache is unchanged. **429** after 5 syncs in 10 minutes.
+
 ## Session
-`POST /session` `{ email, password }` · `DELETE /session` · `GET /session` (current user)
+`POST /session` `{ email, password }` · `DELETE /session` · `GET /session` (current user). The user includes `email_inbox`: true only for an Admin while the demo inbox is on.
 
 ## Reference
 `GET /reference` → `{ data: { countries: [{code, name, currency}], currencies, departments, statuses, job_titles } }`. Feeds the UI dropdowns; `job_titles` are the distinct titles in use.

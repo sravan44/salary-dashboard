@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_024229) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_11_134313) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -235,6 +235,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_024229) do
     t.string "roles", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "password_changed_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.check_constraint "cardinality(roles) > 0 AND roles <@ ARRAY['viewer'::character varying, 'hr_manager'::character varying, 'admin'::character varying]", name: "users_roles_valid"
   end

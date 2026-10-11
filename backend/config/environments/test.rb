@@ -4,6 +4,11 @@
 # and recreated between test runs. Don't rely on the data there!
 
 Rails.application.configure do
+  # Emails are kept in memory (ActionMailer::Base.deliveries); jobs, including deliver_later, are enqueued for
+  # assertions rather than run.
+  config.action_mailer.delivery_method = :test
+  config.active_job.queue_adapter = :test
+
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.

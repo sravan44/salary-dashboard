@@ -6,6 +6,8 @@ export type SessionUser = {
   email: string
   roles: string[]
   permissions: Record<Permission, boolean>
+  /** True for Admins when the server keeps the demo email inbox (/letter_opener). */
+  email_inbox: boolean
 }
 
 export const ROLE_LABELS: Record<string, string> = { viewer: 'Viewer', hr_manager: 'HR manager', admin: 'Admin' }

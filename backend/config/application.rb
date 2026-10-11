@@ -7,7 +7,7 @@ require "active_job/railtie"
 require "active_record/railtie"
 # require "active_storage/engine"
 require "action_controller/railtie"
-# require "action_mailer/railtie"
+require "action_mailer/railtie"
 # require "action_mailbox/engine"
 # require "action_text/engine"
 require "action_view/railtie"
@@ -45,11 +45,18 @@ module SalaryInsights
 
     # The built React app's entry page (see FrontendController). Kept outside public/ so it is
     # never served with the long-lived cache headers used for hashed assets.
+    # Links in emails (set-password, reset) point at the app's public address: APP_URL, else https://APP_HOST
+    # (the domain Caddy serves), else the local app.
+    app_host = ENV["APP_HOST"].to_s
+    config.x.app_url = ENV["APP_URL"].presence || (app_host.match?(/\A[a-z0-9.-]+\z/i) ? "https://#{app_host}" : "http://localhost:3000")
+
     config.x.frontend_index = Rails.root.join(ENV.fetch("FRONTEND_INDEX", "frontend/index.html"))
     config.x.frontend_graphiql = Rails.root.join(ENV.fetch("FRONTEND_GRAPHIQL", "frontend/graphiql.html"))
 
     # GraphiQL (/graphiql) and GraphQL schema browsing: on for local/dev, off for real deployments
     # unless GRAPHIQL_ENABLED=true.
+    # The demo email inbox (letter_opener_web, Admins only): on locally, opt-in elsewhere with EMAIL_INBOX=true.
+    config.x.email_inbox = ENV.fetch("EMAIL_INBOX") { Rails.env.local?.to_s } == "true"
     config.x.graphiql_enabled = ENV.fetch("GRAPHIQL_ENABLED") { Rails.env.local?.to_s } == "true"
   end
 end

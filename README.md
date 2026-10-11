@@ -119,13 +119,25 @@ EMAIL=you@example.com ROLES=admin,hr_manager PASSWORD=<12+ chars> bin/rails user
 ```
 After that, an Admin adds people and changes roles on the **Users** page.
 
+**Passwords and account emails:**
+- An Admin can add a user without a password; nothing is sent at that point.
+- On the **Users** page (filterable by email, role and password status), the Admin picks users in a multi-select and sends them a **password link**. Users without a password get a set-password link, valid 24 hours; others get a reset link, valid 2 hours. Each link works once.
+- An Admin can also set a password directly.
+- Anyone can **change their own password** (header → *Change password*) or use **Forgot password?** on the sign-in page.
+- No email ever contains a password.
+
+**Demo email inbox (extended behaviour, beyond the accepted scope).** So the password links can be tried without a real mailbox, emails can be kept in an inbox page ([letter_opener_web](https://github.com/fgrehm/letter_opener_web)) instead of being sent:
+- **Admins only.** Sign in as an Admin, then use **Email inbox (demo)** in the menu (`/letter_opener`; in development also http://localhost:5173/letter_opener). Anyone else, signed in or not, never sees it.
+- **Development:** always on. **A server:** only with `EMAIL_INBOX=true` in its `.env`, and only while SMTP isn't set; SMTP always wins. Each deploy empties the inbox.
+- **This is for the demo only.** In production, email will go out through SMTP (`SMTP_USERNAME`, `SMTP_PASSWORD` and optionally `MAIL_FROM`; see `.env.example` and [`deploy/README.md`](deploy/README.md)), with `EMAIL_INBOX` left off.
+
 ## Exchange rates (reporting currency)
 
 ```bash
 cd backend
 bin/rails fx:refresh     # one request to Frankfurter (ECB reference rates); cached in fx_rates; safe to re-run
 ```
-**Kept in sync automatically:** `FxRefreshJob` runs every weekday at 16:30 Frankfurt time (after the ECB publishes; `config/recurring.yml`) through **Solid Queue**, which runs inside Puma in the same container and stores its jobs in the same PostgreSQL database (no Redis, no second service). A provider failure is retried twice, 30 minutes apart; after that the cached rates stay, and the dashboard flags them as stale once they're more than 7 days old. The Docker image also refreshes once on start; if the provider can't be reached, the app still starts. Set `SOLID_QUEUE_IN_PUMA=false` to run `bin/jobs` as a separate process instead. Each app process keeps the rates in memory: a request costs one tiny version query, and the rates are re-read only after a refresh. On the dashboard, **Reporting currency** converts every salary at those rates (indicative only) and shows the rate, date and source under each converted chart. `FX_PROVIDER_URL` overrides the provider address (default `https://api.frankfurter.dev/v1`; HTTPS redirects are followed, up to 3).
+**Kept in sync automatically:** `FxRefreshJob` runs every weekday at 16:30 Frankfurt time (after the ECB publishes; `config/recurring.yml`) through **Solid Queue**, which runs inside Puma in the same container and stores its jobs in the same PostgreSQL database (no Redis, no second service). A provider failure is retried twice, 30 minutes apart; after that the cached rates stay, and the dashboard flags them as stale once they're more than 7 days old. The Docker image also refreshes once on start; if the provider can't be reached, the app still starts. Set `SOLID_QUEUE_IN_PUMA=false` to run `bin/jobs` as a separate process instead. Each app process keeps the rates in memory: a request costs one tiny version query, and the rates are re-read only after a refresh. Admins can also see the cached rates on the **Exchange rates** page (third link in an Admin's menu) and fetch fresh ones with **Sync rates** (up to 5 times per 10 minutes; if the provider fails, the cached rates stay). On the dashboard, **Reporting currency** converts every salary at those rates (indicative only) and shows the rate, date and source under each converted chart. `FX_PROVIDER_URL` overrides the provider address (default `https://api.frankfurter.dev/v1`; HTTPS redirects are followed, up to 3).
 
 ## Seed data
 

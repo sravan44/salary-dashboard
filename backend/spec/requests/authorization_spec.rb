@@ -16,7 +16,13 @@ RSpec.describe "Authorization" do
     "dashboard (GraphQL)" => [ :post, "/graphql", { query: "{ dashboard { headcount } }" } ],
     "list users" => [ :get, "/api/v1/users" ],
     "create user" => [ :post, "/api/v1/users", { user: { email: "" } } ],
-    "change roles" => [ :patch, "/api/v1/users/:user_id", { user: { roles: [ "viewer" ] } } ]
+    "change roles" => [ :patch, "/api/v1/users/:user_id", { user: { roles: [ "viewer" ] } } ],
+    "set a user's password" => [ :patch, "/api/v1/users/:user_id/password", { password: "set by the admin!" } ],
+    "send password links" => [ :post, "/api/v1/users/password_links", { user_ids: [ ":user_id" ] } ],
+    "change my password" => [ :patch, "/api/v1/password", { current_password: "wrong", password: "a brand new password" } ],
+    "forgot password" => [ :post, "/api/v1/password_reset", { email: "nobody@acme.example" } ],
+    "use a reset link" => [ :patch, "/api/v1/password_reset", { token: "bad", password: "a brand new password" } ],
+    "list exchange rates" => [ :get, "/api/v1/exchange_rates" ]
   }.freeze
 
   # Expected status per request: signed out, viewer, hr_manager, admin.
@@ -32,12 +38,19 @@ RSpec.describe "Authorization" do
     "dashboard (GraphQL)" => [ 401, 200, 200, 200 ],
     "list users" => [ 401, 403, 403, 200 ],
     "create user" => [ 401, 403, 403, 422 ],
-    "change roles" => [ 401, 403, 403, 200 ]
+    "change roles" => [ 401, 403, 403, 200 ],
+    "set a user's password" => [ 401, 403, 403, 200 ],
+    "send password links" => [ 401, 403, 403, 202 ],
+    "change my password" => [ 401, 422, 422, 422 ],
+    "forgot password" => [ 202, 202, 202, 202 ],
+    "use a reset link" => [ 422, 422, 422, 422 ],
+    "list exchange rates" => [ 401, 403, 403, 200 ]
   }.freeze
 
   def call(name, other_user)
     verb, path, body = REQUESTS.fetch(name)
     path = path.sub(":id", employee.id.to_s).sub(":user_id", other_user.id.to_s)
+    body = body&.transform_values { |value| value == [ ":user_id" ] ? [ other_user.id ] : value }
     public_send(verb, path, params: body, as: :json)
     response.status
   end

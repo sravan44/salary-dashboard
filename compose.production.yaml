@@ -34,6 +34,14 @@ services:
       # true once APP_HOST is a domain (HTTPS through Caddy); false for plain HTTP on the IP.
       FORCE_SSL: ${FORCE_SSL:-false}
       AUTO_SEED: "true"          # seed the 10k demo data on the first start only
+      # Account emails (set-password and reset links) through Gmail SMTP: a Gmail address + a Google app password.
+      # Unset = emails are not sent; Admins can still set passwords directly. Links point at https://APP_HOST.
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      APP_HOST: ${APP_HOST:-}
+      # Demo only: keep emails in the Admin-only inbox at /letter_opener (used only while SMTP is unset).
+      EMAIL_INBOX: ${EMAIL_INBOX:-false}
       GRAPHIQL_ENABLED: "false"
     # No published port: only Caddy reaches it, on the internal network.
     depends_on:

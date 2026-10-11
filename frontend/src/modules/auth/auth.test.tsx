@@ -94,11 +94,13 @@ describe('What each role sees', () => {
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard', 'Employees'])
   })
 
-  it('an admin sees the dashboard and users', async () => {
+  it('an admin sees the dashboard, users, exchange rates and (when on) the demo email inbox', async () => {
     signInMockAs(adminUser)
     renderApp('/')
 
     const nav = await screen.findByRole('navigation', { name: 'Main' })
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard', 'Users'])
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Dashboard', 'Users', 'Exchange rates', 'Email inbox (demo)Opens in a new tab',
+    ])
   })
 })

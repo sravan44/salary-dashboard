@@ -49,6 +49,31 @@ Rails.application.configure do
   # Solid Queue, in the app's own database (no separate queue database); run inside Puma.
   config.active_job.queue_adapter = :solid_queue
 
+  # Email through SMTP (Gmail by default: SMTP_USERNAME = the Gmail address, SMTP_PASSWORD = a Google app password).
+  # Both come from the server's environment, never from git. Without them, emails are not sent (kept in memory
+  # and dropped) and a warning is logged at boot; Admins can still set passwords directly.
+  if ENV["SMTP_USERNAME"].present?
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = {
+      address: ENV.fetch("SMTP_ADDRESS", "smtp.gmail.com"),
+      port: Integer(ENV.fetch("SMTP_PORT", "587")),
+      user_name: ENV["SMTP_USERNAME"],
+      password: ENV["SMTP_PASSWORD"],
+      authentication: :plain,
+      enable_starttls_auto: true,
+      open_timeout: 5,
+      read_timeout: 10
+    }
+    config.action_mailer.raise_delivery_errors = true # a failed send fails the job, which Solid Queue records
+  elsif config.x.email_inbox
+    # Demo only: no email leaves the server; Admins read it at /letter_opener. Kept in tmp/, so a deploy empties it.
+    config.action_mailer.delivery_method = :letter_opener_web
+    config.after_initialize { Rails.logger.warn("EMAIL_INBOX is on: account emails go to the Admin inbox at /letter_opener, not to people") }
+  else
+    config.action_mailer.delivery_method = :test
+    config.after_initialize { Rails.logger.warn("SMTP_USERNAME is not set: account emails will not be sent") }
+  end
+
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
   config.i18n.fallbacks = true

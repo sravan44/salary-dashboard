@@ -1,6 +1,11 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Emails are never sent: letter_opener_web keeps each one under tmp/letter_opener and lists them at
+  # http://localhost:3000/letter_opener (also through Vite on :5173), so set-password and reset links can be followed.
+  config.action_mailer.delivery_method = :letter_opener_web
+  config.action_mailer.perform_deliveries = true
+
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Make code changes take effect immediately without server restart.

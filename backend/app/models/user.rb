@@ -12,7 +12,10 @@ class User < ApplicationRecord
     manage_users: %w[admin]
   }.freeze
 
-  has_secure_password
+  # Reset links last 2 hours; set-password links for new accounts last 24 hours. Both are signed and tied
+  # to the current password's salt, so any password change makes every earlier link stop working.
+  has_secure_password reset_token: { expires_in: 2.hours }
+  generates_token_for(:password_setup, expires_in: 24.hours) { password_salt.last(10) } # every account has a digest
   has_many :sessions, dependent: :delete_all
 
   normalizes :email, with: ->(email) { email.strip.downcase }
@@ -22,6 +25,8 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
   validates :password, length: { minimum: 12 }, allow_nil: true
   validate :roles_are_known
+
+  def password_set? = password_changed_at.present?
 
   def can?(permission) = PERMISSIONS.fetch(permission).intersect?(roles)
 

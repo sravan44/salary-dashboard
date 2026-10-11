@@ -178,11 +178,13 @@ function recordWrite(write: EmployeeWrite) {
 
 // ---- Sign-in session -------------------------------------------------------------------
 type Permissions = { view_dashboard: boolean; manage_employees: boolean; manage_users: boolean }
-export type MockUser = { id: number; email: string; roles: string[]; permissions: Permissions }
+// email_inbox mirrors a server with the demo inbox on: true for Admins only.
+export type MockUser = { id: number; email: string; roles: string[]; permissions: Permissions; email_inbox: boolean }
 
 const user = (id: number, email: string, roles: string[]): MockUser => ({
   id, email, roles,
   permissions: { view_dashboard: true, manage_employees: roles.includes('hr_manager'), manage_users: roles.includes('admin') },
+  email_inbox: roles.includes('admin'),
 })
 export const hrUser = user(10, 'hr@acme.example', ['hr_manager'])
 export const viewerUser = user(11, 'viewer@acme.example', ['viewer'])
@@ -213,12 +215,13 @@ export function expireMockSession() {
 const unauthorized = () => HttpResponse.json({ error: { code: 'unauthenticated', message: 'Please sign in', details: {} } }, { status: 401 })
 
 // ---- User management (admin) -------------------------------------------------------------
-type UserRow = { id: number; email: string; roles: string[]; created_at: string }
+type UserRow = { id: number; email: string; roles: string[]; password_set: boolean; created_at: string }
 type UserWrite = { method: 'POST' | 'PATCH'; id?: string; body: Record<string, unknown> }
 export const userWrites: UserWrite[] = []
 const initialUsers = (): UserRow[] => [
-  { id: 12, email: 'admin@acme.example', roles: ['admin'], created_at: '2026-10-01T09:00:00Z' },
-  { id: 13, email: 'priya@acme.example', roles: ['viewer'], created_at: '2026-10-02T09:00:00Z' },
+  { id: 12, email: 'admin@acme.example', roles: ['admin'], password_set: true, created_at: '2026-10-01T09:00:00Z' },
+  { id: 13, email: 'priya@acme.example', roles: ['viewer'], password_set: false, created_at: '2026-10-02T09:00:00Z' },
+  { id: 14, email: 'hr.lead@acme.example', roles: ['viewer', 'hr_manager'], password_set: true, created_at: '2026-10-03T09:00:00Z' },
 ]
 let userRows = initialUsers()
 let usersListFails = false
@@ -235,15 +238,48 @@ function recordUserWrite(write: UserWrite) {
   const custom = userWriteResponder(write)
   if (custom) return HttpResponse.json(custom.body, { status: custom.status ?? 200 })
 
-  const fields = write.body.user as { email?: string; roles: string[] }
+  const fields = write.body.user as { email?: string; roles: string[]; password?: string }
   if (write.method === 'POST') {
-    const row = { id: 100 + userRows.length, email: fields.email!, roles: fields.roles, created_at: '2026-10-10T09:00:00Z' }
+    const row = { id: 100 + userRows.length, email: fields.email!, roles: fields.roles, password_set: Boolean(fields.password), created_at: '2026-10-10T09:00:00Z' }
     userRows.push(row)
     return HttpResponse.json({ data: row }, { status: 201 })
   }
   const row = userRows.find((r) => String(r.id) === write.id)!
   row.roles = fields.roles
   return HttpResponse.json({ data: row })
+}
+
+// ---- Passwords --------------------------------------------------------------------------------
+type PasswordCall = { method: 'POST' | 'PATCH'; path: string; body: Record<string, unknown> }
+/** Every password-related request the UI made (forgot, reset link, change mine, admin set/send), oldest first. */
+export const passwordCalls: PasswordCall[] = []
+let passwordResponder: (call: PasswordCall) => WriteReply | null = () => null
+/** Override the default success answers, e.g. to return field errors or an expired link. */
+export function respondToPasswordCall(responder: (call: PasswordCall) => WriteReply | null) {
+  passwordResponder = responder
+}
+
+async function recordPasswordCall(method: PasswordCall['method'], request: Request) {
+  const url = new URL(request.url)
+  const text = await request.text()
+  const call = { method, path: url.pathname, body: (text ? JSON.parse(text) : {}) as Record<string, unknown> }
+  passwordCalls.push(call)
+  const custom = passwordResponder(call)
+  if (custom) return HttpResponse.json(custom.body, { status: custom.status ?? 200 })
+
+  if (call.path === '/api/v1/password_reset' && method === 'POST') {
+    return HttpResponse.json({ data: { message: "If an account exists for that email, we've sent a link to reset the password." } }, { status: 202 })
+  }
+  const userPassword = call.path.match(/^\/api\/v1\/users\/(\d+)\/password$/)
+  if (userPassword) {
+    const row = userRows.find((r) => String(r.id) === userPassword[1])!
+    row.password_set = true
+    return HttpResponse.json({ data: row })
+  }
+  if (call.path === '/api/v1/users/password_links') {
+    return HttpResponse.json({ data: { sent: (call.body.user_ids as number[]).length } }, { status: 202 })
+  }
+  return new HttpResponse(null, { status: 204 })
 }
 
 // ---- Salary history and audit trail -----------------------------------------------------------
@@ -366,6 +402,11 @@ export const server = setupServer(
     usersListFails ? HttpResponse.json({ error: { code: 'server_error', message: 'Could not load users', details: {} } }, { status: 500 }) : HttpResponse.json({ data: userRows }),
   ),
   http.post('*/api/v1/users', async ({ request }) => recordUserWrite({ method: 'POST', body: (await request.json()) as Record<string, unknown> })),
+  http.patch('*/api/v1/users/:id/password', ({ request }) => recordPasswordCall('PATCH', request)),
+  http.post('*/api/v1/users/password_links', ({ request }) => recordPasswordCall('POST', request)),
+  http.patch('*/api/v1/password', ({ request }) => recordPasswordCall('PATCH', request)),
+  http.post('*/api/v1/password_reset', ({ request }) => recordPasswordCall('POST', request)),
+  http.patch('*/api/v1/password_reset', ({ request }) => recordPasswordCall('PATCH', request)),
   http.patch('*/api/v1/users/:id', async ({ request, params }) =>
     recordUserWrite({ method: 'PATCH', id: params.id as string, body: (await request.json()) as Record<string, unknown> }),
   ),
@@ -381,6 +422,13 @@ export const server = setupServer(
     recordWrite({ method: 'PATCH', id: params.id as string, body: (await request.json()) as EmployeeWrite['body'] }),
   ),
   http.get('*/api/v1/reference', () => HttpResponse.json({ data: reference })),
+  http.get('*/api/v1/exchange_rates', () => HttpResponse.json({ data: ratesSnapshot })),
+  http.post('*/api/v1/exchange_rates/sync', () => {
+    rateSyncCalls.push('sync')
+    const { status, body } = syncResponder()
+    if (status === 200) ratesSnapshot = { ...(body as { data: RatesSnapshot }).data }
+    return HttpResponse.json(body as Record<string, unknown>, { status })
+  }),
   graphql.query('DashboardOverview', ({ variables }) => {
     graphqlCalls.push({ operation: 'DashboardOverview', variables })
     return HttpResponse.json(overviewResponder(variables))
@@ -401,7 +449,31 @@ export const server = setupServer(
   }),
 )
 
+// ---- Exchange rates (Admin) ------------------------------------------------------------
+export type RatesSnapshot = {
+  base: string; rate_date: string | null; source: string | null; fetched_at: string | null; stale: boolean
+  rates: { currency: string; rate: string }[]
+}
+const initialRates = (): RatesSnapshot => ({
+  base: 'EUR', rate_date: '2026-10-09', source: 'ECB reference rates via Frankfurter', fetched_at: '2026-10-09T16:00:00Z', stale: false,
+  rates: [{ currency: 'GBP', rate: '0.85' }, { currency: 'INR', rate: '92.4' }, { currency: 'USD', rate: '1.1' }],
+})
+let ratesSnapshot = initialRates()
+/** One entry per POST /exchange_rates/sync. */
+export const rateSyncCalls: string[] = []
+type SyncReply = { status: number; body: unknown }
+let syncResponder: () => SyncReply = () => ({ status: 200, body: { data: { ...ratesSnapshot, stored: ratesSnapshot.rates.length } } })
+export function setMockRates(next: Partial<RatesSnapshot>) {
+  ratesSnapshot = { ...ratesSnapshot, ...next }
+}
+export function respondToRateSync(responder: () => SyncReply) {
+  syncResponder = responder
+}
+
 export function resetApiMock() {
+  ratesSnapshot = initialRates()
+  rateSyncCalls.length = 0
+  syncResponder = () => ({ status: 200, body: { data: { ...ratesSnapshot, stored: ratesSnapshot.rates.length } } })
   salaryHistory = initialHistory()
   auditTrailFails = false
   salaryChanges.length = 0
@@ -413,6 +485,8 @@ export function resetApiMock() {
   sessionCheckFails = false
   usersListFails = false
   userWrites.length = 0
+  passwordCalls.length = 0
+  respondToPasswordCall(() => null)
   userRows = initialUsers()
   respondToUserWrite(() => null)
   employeeWrites.length = 0

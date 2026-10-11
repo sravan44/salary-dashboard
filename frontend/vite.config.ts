@@ -16,6 +16,8 @@ export default defineConfig({
     proxy: {
       '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:3000',
       '/graphql': process.env.API_PROXY_TARGET ?? 'http://localhost:3000',
+      // The development email inbox (letter_opener_web), so set-password links can be opened from :5173.
+      '/letter_opener': process.env.API_PROXY_TARGET ?? 'http://localhost:3000',
     },
   },
   test: {

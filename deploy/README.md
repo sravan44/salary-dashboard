@@ -64,6 +64,28 @@ Caddy runs in front of the app and gets a Let's Encrypt certificate for `APP_HOS
 
 If the certificate doesn't arrive, run `ssh … 'cd ~/salary-dashboard/current && docker compose -f compose.production.yaml logs caddy | tail -30'`. The usual causes are DNS not pointing at `<ip>` yet, or port 80 or 443 closed. Let's Encrypt checks the domain over port 80.
 
+## Demo email inbox (optional, demo only)
+
+Until Gmail is set up, the demo can keep its emails in an Admin-only inbox instead of dropping them. This is extended behaviour for the demo, not for real use; production will send through SMTP (next section).
+```bash
+ssh -i ~/.ssh/<key>.pem ubuntu@<ip> "cd ~/salary-dashboard/shared && sed -i '/^EMAIL_INBOX=/d' .env && echo 'EMAIL_INBOX=true' >> .env && grep '^EMAIL_INBOX=' .env"
+```
+Deploy again. Then sign in as an Admin and choose **Email inbox (demo)** in the menu (`https://<domain>/letter_opener`). Once `SMTP_USERNAME` is set, email goes through SMTP and the inbox stays empty; set `EMAIL_INBOX=false` (or remove the line) to hide it. Each deploy empties it.
+
+## Account emails through Gmail (once)
+
+Invitations and reset links are sent through Gmail's SMTP server. Without these settings the app works, but sends no email; Admins can still set passwords on the Users screen.
+1. In the Google account that will send the emails, turn on **2-Step Verification**. Then go to **Security → App passwords**, create one named e.g. "Salary demo", and copy the 16 characters.
+2. Add the settings to the server's `.env`. Type the app password where shown, without spaces:
+   ```bash
+   ssh -i ~/.ssh/<key>.pem ubuntu@<ip> "cd ~/salary-dashboard/shared && sed -i '/^SMTP_USERNAME=/d; /^SMTP_PASSWORD=/d; /^MAIL_FROM=/d' .env && printf 'SMTP_USERNAME=you@gmail.com\nSMTP_PASSWORD=<app password>\nMAIL_FROM=you@gmail.com\n' >> .env && grep -c '^SMTP_' .env"
+   ```
+   It should print `2`.
+3. Deploy again (`bundle exec cap production deploy`), so the app restarts with the settings.
+4. Test it with **Forgot password?** for your own account, or by choosing yourself under **Send a password link to** on the Users screen. If nothing arrives, run `bundle exec cap production docker:logs` and look for `Failed delivery of mail`.
+
+Links in the emails point at `https://<APP_HOST>`. Gmail allows about 500 emails a day from a personal account.
+
 ## Checking and fixing
 
 | Command (from `deploy/`) | What it does |

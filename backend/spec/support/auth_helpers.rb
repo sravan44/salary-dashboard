@@ -15,5 +15,9 @@ end
 RSpec.configure do |config|
   config.include AuthHelpers, type: :request
   # The login rate limit counts per IP across requests; each example starts with a clean count.
-  config.before { Api::V1::SessionsController::RATE_LIMIT_STORE.clear }
+  config.before do
+    Api::V1::SessionsController::RATE_LIMIT_STORE.clear
+    Api::V1::PasswordResetsController::RATE_LIMIT_STORE.clear
+    Api::V1::ExchangeRatesController::RATE_LIMIT_STORE.clear
+  end
 end
