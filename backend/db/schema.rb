@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_021232) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_11_024229) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
 
   create_table "compensations", force: :cascade do |t|
     t.bigint "employee_id", null: false
@@ -45,7 +46,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_021232) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_employees_on_email", unique: true
+    t.index ["email"], name: "index_employees_on_email_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["employee_number"], name: "index_employees_on_employee_number", unique: true
+    t.index ["employee_number"], name: "index_employees_on_employee_number_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["full_name", "id"], name: "index_employees_on_full_name_and_id"
+    t.index ["full_name"], name: "index_employees_on_full_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'terminated'::character varying::text])", name: "employees_status_known"
   end
 

@@ -6,10 +6,7 @@ module Api
 
       def index
         employee = Employee.find(params[:employee_id])
-        versions = Version.where(item: employee)
-                          .or(Version.where(item_type: "Compensation", item_id: employee.compensations.select(:id)))
-                          .order(id: :desc)
-        render json: { data: versions.map { |version| serialize(version) } }
+        render json: { data: Versions::ForEmployeeQuery.new(employee).call.map { |version| serialize(version) } }
       end
 
       private

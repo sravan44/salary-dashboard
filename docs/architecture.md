@@ -45,8 +45,10 @@ Earlier three-container setup (M1), kept for reference: [`examples/before-single
 
 ## Performance approach (10k employees)
 - All filtering, sorting and pagination happens in SQL; no endpoint loads every employee.
-- Planned indexes: `employees(employee_number)` unique; `employees(country_code, department, status)`; `compensations(employee_id) WHERE effective_to IS NULL` (unique partial index, which also enforces one current salary). Further indexes only after EXPLAIN on the 10k seed (M8).
-- No caching until a measurement shows a need.
+- Indexes, each justified by EXPLAIN on the 10k seed (M8, `docs/evidence/performance.md`): `employees(employee_number)` and `employees(email)` unique; `employees(full_name, id)` for the default order; trigram GIN (`pg_trgm`) on name, email and number for substring search; `compensations(employee_id) WHERE effective_to IS NULL` (unique partial index, which also enforces one current salary); `versions(item_type, item_id, id)` for the audit trail. The planned `employees(country_code, department, status)` was **not** added: filtered pages take about 5 ms with a scan at 10k.
+- Query counts are fixed and pinned by specs: directory 2, dashboard overview 1 (`GROUPING SETS`), audit trail 1 (`UNION ALL`).
+- Measured at 10k: every request under 100 ms on the server (budget 200 ms). At 100k, the converted dashboard would be the first to exceed it (about 0.7 s); the fix then is caching converted aggregates per rate version.
+- No response caching; only the exchange-rate snapshot is kept in memory (version-checked).
 
 ## Future domains (not built)
 Paystubs, employee documents and employee lifecycle may become separate modules or services. They are documented only; the MVP has no dependency on them.

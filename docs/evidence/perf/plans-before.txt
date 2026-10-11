@@ -1,0 +1,748 @@
+# EXPLAIN (ANALYZE, BUFFERS) — before — 2026-10-11T02:41:34Z
+
+## Directory: default page (name order) (2 statements)
+
+SELECT COUNT(*) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL /*application='SalaryInsights'*/
+Aggregate  (cost=959.24..959.25 rows=1 width=8) (actual time=4.796..4.797 rows=1 loops=1)
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=418.29..934.24 rows=10000 width=0) (actual time=1.844..4.252 rows=10000 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.009..0.858 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=293.00..293.00 rows=10000 width=8) (actual time=1.828..1.828 rows=10000 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 519kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..293.00 rows=10000 width=8) (actual time=0.003..0.760 rows=10000 loops=1)
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.142 ms
+Execution Time: 4.835 ms
+
+SELECT employees.*, current_comp.amount AS current_amount, current_comp.currency AS current_currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL ORDER BY employees.full_name ASC, employees.id ASC LIMIT 25 OFFSET 0 /*application='SalaryInsights'*/
+Limit  (cost=1652.48..1652.54 rows=25 width=131) (actual time=9.055..9.060 rows=25 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1652.48..1677.48 rows=10000 width=131) (actual time=9.054..9.057 rows=25 loops=1)
+        Sort Key: employees.full_name, employees.id
+        Sort Method: top-N heapsort  Memory: 37kB
+        Buffers: shared hit=654
+        ->  Hash Right Join  (cost=418.29..1370.28 rows=10000 width=131) (actual time=2.046..5.984 rows=10000 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=654
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.005..1.284 rows=10000 loops=1)
+                    Buffers: shared hit=461
+              ->  Hash  (cost=293.00..293.00 rows=10000 width=121) (actual time=2.033..2.034 rows=10000 loops=1)
+                    Buckets: 16384  Batches: 1  Memory Usage: 1690kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..293.00 rows=10000 width=121) (actual time=0.002..0.617 rows=10000 loops=1)
+                          Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.141 ms
+Execution Time: 9.151 ms
+
+## Directory: search "rao" (2 statements)
+
+SELECT COUNT(*) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE (employees.full_name ILIKE '%rao%' OR employees.employee_number ILIKE '%rao%' OR employees.email ILIKE '%rao%') /*application='SalaryInsights'*/
+Aggregate  (cost=805.97..805.98 rows=1 width=8) (actual time=12.391..12.392 rows=1 loops=1)
+  Buffers: shared hit=716
+  ->  Nested Loop Left Join  (cost=0.29..805.19 rows=311 width=0) (actual time=0.078..12.368 rows=261 loops=1)
+        Buffers: shared hit=716
+        ->  Seq Scan on employees  (cost=0.00..368.00 rows=311 width=8) (actual time=0.066..11.995 rows=261 loops=1)
+              Filter: (((full_name)::text ~~* '%rao%'::text) OR ((employee_number)::text ~~* '%rao%'::text) OR ((email)::text ~~* '%rao%'::text))
+              Rows Removed by Filter: 9739
+              Buffers: shared hit=193
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..1.40 rows=1 width=8) (actual time=0.001..0.001 rows=1 loops=261)
+              Index Cond: (employee_id = employees.id)
+              Heap Fetches: 0
+              Buffers: shared hit=523
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.325 ms
+Execution Time: 12.409 ms
+
+SELECT employees.*, current_comp.amount AS current_amount, current_comp.currency AS current_currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE (employees.full_name ILIKE '%rao%' OR employees.employee_number ILIKE '%rao%' OR employees.email ILIKE '%rao%') ORDER BY employees.full_name ASC, employees.id ASC LIMIT 25 OFFSET 0 /*application='SalaryInsights'*/
+Limit  (cost=1332.95..1333.01 rows=25 width=131) (actual time=16.167..16.173 rows=25 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1332.95..1333.73 rows=311 width=131) (actual time=16.166..16.169 rows=25 loops=1)
+        Sort Key: employees.full_name, employees.id
+        Sort Method: top-N heapsort  Memory: 36kB
+        Buffers: shared hit=654
+        ->  Hash Right Join  (cost=372.17..1324.17 rows=311 width=131) (actual time=12.342..15.991 rows=261 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=654
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.007..2.056 rows=10000 loops=1)
+                    Buffers: shared hit=461
+              ->  Hash  (cost=368.00..368.00 rows=311 width=121) (actual time=12.321..12.322 rows=261 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 48kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..368.00 rows=311 width=121) (actual time=0.044..12.280 rows=261 loops=1)
+                          Filter: (((full_name)::text ~~* '%rao%'::text) OR ((employee_number)::text ~~* '%rao%'::text) OR ((email)::text ~~* '%rao%'::text))
+                          Rows Removed by Filter: 9739
+                          Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.348 ms
+Execution Time: 16.196 ms
+
+## Directory: 2 countries × 1 dept × active (2 statements)
+
+SELECT COUNT(*) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."country_code" IN ('IN', 'US') AND "employees"."department" = 'Engineering' AND "employees"."status" = 'active' /*application='SalaryInsights'*/
+Aggregate  (cost=907.31..907.32 rows=1 width=8) (actual time=3.293..3.295 rows=1 loops=1)
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=387.51..903.46 rows=1538 width=0) (actual time=1.452..3.209 rows=1541 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.007..0.850 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=368.00..368.00 rows=1538 width=8) (actual time=1.438..1.438 rows=1541 loops=1)
+              Buckets: 2048  Batches: 1  Memory Usage: 77kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..368.00 rows=1538 width=8) (actual time=0.007..1.281 rows=1541 loops=1)
+                    Filter: (((country_code)::text = ANY ('{IN,US}'::text[])) AND ((department)::text = 'Engineering'::text) AND ((status)::text = 'active'::text))
+                    Rows Removed by Filter: 8459
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.162 ms
+Execution Time: 3.311 ms
+
+SELECT employees.*, current_comp.amount AS current_amount, current_comp.currency AS current_currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."country_code" IN ('IN', 'US') AND "employees"."department" = 'Engineering' AND "employees"."status" = 'active' ORDER BY employees.full_name ASC, employees.id ASC LIMIT 25 OFFSET 0 /*application='SalaryInsights'*/
+Limit  (cost=1382.91..1382.97 rows=25 width=131) (actual time=4.824..4.829 rows=25 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1382.91..1386.76 rows=1538 width=131) (actual time=4.823..4.825 rows=25 loops=1)
+        Sort Key: employees.full_name, employees.id
+        Sort Method: top-N heapsort  Memory: 37kB
+        Buffers: shared hit=654
+        ->  Hash Right Join  (cost=387.51..1339.51 rows=1538 width=131) (actual time=1.414..4.250 rows=1541 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=654
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.005..1.237 rows=10000 loops=1)
+                    Buffers: shared hit=461
+              ->  Hash  (cost=368.00..368.00 rows=1538 width=121) (actual time=1.401..1.401 rows=1541 loops=1)
+                    Buckets: 2048  Batches: 1  Memory Usage: 261kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..368.00 rows=1538 width=121) (actual time=0.006..1.244 rows=1541 loops=1)
+                          Filter: (((country_code)::text = ANY ('{IN,US}'::text[])) AND ((department)::text = 'Engineering'::text) AND ((status)::text = 'active'::text))
+                          Rows Removed by Filter: 8459
+                          Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.179 ms
+Execution Time: 4.847 ms
+
+## Directory: USD 100k–150k, salary desc (2 statements)
+
+SELECT COUNT(*) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "current_comp"."currency" = 'USD' AND (current_comp.amount >= 100000.0) AND (current_comp.amount <= 150000.0) /*application='SalaryInsights'*/
+Aggregate  (cost=1340.04..1340.05 rows=1 width=8) (actual time=5.016..5.018 rows=1 loops=1)
+  Buffers: shared hit=654
+  ->  Hash Join  (cost=1006.90..1338.85 rows=476 width=0) (actual time=2.745..4.934 rows=1058 loops=1)
+        Hash Cond: (employees.id = current_comp.employee_id)
+        Buffers: shared hit=654
+        ->  Seq Scan on employees  (cost=0.00..293.00 rows=10000 width=8) (actual time=0.002..0.848 rows=10000 loops=1)
+              Buffers: shared hit=193
+        ->  Hash  (cost=1000.95..1000.95 rows=476 width=8) (actual time=2.735..2.736 rows=1058 loops=1)
+              Buckets: 2048 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 58kB
+              Buffers: shared hit=461
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..1000.95 rows=476 width=8) (actual time=0.007..2.548 rows=1058 loops=1)
+                    Filter: ((amount >= 100000.0) AND (amount <= 150000.0) AND ((currency)::text = 'USD'::text))
+                    Rows Removed by Filter: 8942
+                    Buffers: shared hit=461
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.164 ms
+Execution Time: 5.039 ms
+
+SELECT employees.*, current_comp.amount AS current_amount, current_comp.currency AS current_currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "current_comp"."currency" = 'USD' AND (current_comp.amount >= 100000.0) AND (current_comp.amount <= 150000.0) ORDER BY current_comp.amount DESC, employees.id ASC LIMIT 25 OFFSET 0 /*application='SalaryInsights'*/
+Limit  (cost=1352.28..1352.35 rows=25 width=131) (actual time=6.037..6.043 rows=25 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1352.28..1353.47 rows=476 width=131) (actual time=6.036..6.039 rows=25 loops=1)
+        Sort Key: current_comp.amount DESC, employees.id
+        Sort Method: top-N heapsort  Memory: 35kB
+        Buffers: shared hit=654
+        ->  Hash Join  (cost=1006.90..1338.85 rows=476 width=131) (actual time=3.196..5.464 rows=1058 loops=1)
+              Hash Cond: (employees.id = current_comp.employee_id)
+              Buffers: shared hit=654
+              ->  Seq Scan on employees  (cost=0.00..293.00 rows=10000 width=121) (actual time=0.003..0.737 rows=10000 loops=1)
+                    Buffers: shared hit=193
+              ->  Hash  (cost=1000.95..1000.95 rows=476 width=18) (actual time=3.185..3.185 rows=1058 loops=1)
+                    Buckets: 2048 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 74kB
+                    Buffers: shared hit=461
+                    ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..1000.95 rows=476 width=18) (actual time=0.011..2.960 rows=1058 loops=1)
+                          Filter: ((amount >= 100000.0) AND (amount <= 150000.0) AND ((currency)::text = 'USD'::text))
+                          Rows Removed by Filter: 8942
+                          Buffers: shared hit=461
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.282 ms
+Execution Time: 6.069 ms
+
+## Directory: deep page (400 of 400) (2 statements)
+
+SELECT COUNT(*) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL /*application='SalaryInsights'*/
+Aggregate  (cost=959.24..959.25 rows=1 width=8) (actual time=4.697..4.699 rows=1 loops=1)
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=418.29..934.24 rows=10000 width=0) (actual time=1.754..4.155 rows=10000 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.008..0.865 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=293.00..293.00 rows=10000 width=8) (actual time=1.738..1.738 rows=10000 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 519kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..293.00 rows=10000 width=8) (actual time=0.003..0.745 rows=10000 loops=1)
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.157 ms
+Execution Time: 4.715 ms
+
+SELECT employees.*, current_comp.amount AS current_amount, current_comp.currency AS current_currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL ORDER BY employees.full_name ASC, employees.id ASC LIMIT 25 OFFSET 9975 /*application='SalaryInsights'*/
+Limit  (cost=2059.61..2059.67 rows=25 width=131) (actual time=16.230..16.236 rows=25 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=2034.67..2059.67 rows=10000 width=131) (actual time=15.175..15.828 rows=10000 loops=1)
+        Sort Key: employees.full_name, employees.id
+        Sort Method: quicksort  Memory: 2920kB
+        Buffers: shared hit=654
+        ->  Hash Right Join  (cost=418.29..1370.28 rows=10000 width=131) (actual time=1.669..5.937 rows=10000 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=654
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.006..1.405 rows=10000 loops=1)
+                    Buffers: shared hit=461
+              ->  Hash  (cost=293.00..293.00 rows=10000 width=121) (actual time=1.651..1.652 rows=10000 loops=1)
+                    Buckets: 16384  Batches: 1  Memory Usage: 1690kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..293.00 rows=10000 width=121) (actual time=0.002..0.678 rows=10000 loops=1)
+                          Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.151 ms
+Execution Time: 16.352 ms
+
+## Employee: salary history (1 statements)
+
+SELECT "compensations".* FROM "compensations" WHERE "compensations"."employee_id" = 40003 /*application='SalaryInsights'*/
+Index Scan using index_compensations_on_employee_id on compensations  (cost=0.29..8.77 rows=3 width=98) (actual time=0.003..0.004 rows=4 loops=1)
+  Index Cond: (employee_id = 40003)
+  Buffers: shared hit=3
+Planning Time: 0.022 ms
+Execution Time: 0.010 ms
+
+## Employee: history in USD (3 statements)
+
+SELECT "compensations".* FROM "compensations" WHERE "compensations"."employee_id" = 40003 /*application='SalaryInsights'*/
+Index Scan using index_compensations_on_employee_id on compensations  (cost=0.29..8.77 rows=3 width=98) (actual time=0.007..0.008 rows=4 loops=1)
+  Index Cond: (employee_id = 40003)
+  Buffers: shared hit=3
+Planning Time: 0.035 ms
+Execution Time: 0.016 ms
+
+SELECT MAX(rate_date), MAX(fetched_at) FROM "fx_rates" WHERE "fx_rates"."base" = 'EUR' AND "fx_rates"."rate_date" <= '2026-10-11' LIMIT 1 /*application='SalaryInsights'*/
+Limit  (cost=1.83..1.84 rows=1 width=12) (actual time=0.008..0.009 rows=1 loops=1)
+  Buffers: shared hit=1
+  ->  Aggregate  (cost=1.83..1.84 rows=1 width=12) (actual time=0.008..0.008 rows=1 loops=1)
+        Buffers: shared hit=1
+        ->  Seq Scan on fx_rates  (cost=0.00..1.82 rows=1 width=12) (actual time=0.004..0.005 rows=6 loops=1)
+              Filter: ((rate_date <= '2026-10-11'::date) AND ((base)::text = 'EUR'::text))
+              Buffers: shared hit=1
+Planning Time: 0.090 ms
+Execution Time: 0.019 ms
+
+SELECT "fx_rates"."quote", "fx_rates"."rate", "fx_rates"."source" FROM "fx_rates" WHERE "fx_rates"."base" = 'EUR' AND "fx_rates"."rate_date" = '2026-10-10' /*application='SalaryInsights'*/
+Seq Scan on fx_rates  (cost=0.00..1.82 rows=1 width=68) (actual time=0.003..0.004 rows=6 loops=1)
+  Filter: (((base)::text = 'EUR'::text) AND (rate_date = '2026-10-10'::date))
+  Buffers: shared hit=1
+Planning Time: 0.020 ms
+Execution Time: 0.009 ms
+
+## Employee: audit trail (1 statements)
+
+SELECT "versions".* FROM "versions" WHERE ("versions"."item_type" = 'Employee' AND "versions"."item_id" = 40003 OR "versions"."item_type" = 'Compensation' AND "versions"."item_id" IN (SELECT "compensations"."id" FROM "compensations" WHERE "compensations"."employee_id" = 40003)) ORDER BY "versions"."id" DESC /*application='SalaryInsights'*/
+Index Scan Backward using versions_pkey on versions  (cost=9.07..6762.71 rows=16470 width=342) (actual time=5.394..6.676 rows=5 loops=1)
+  Filter: ((((item_type)::text = 'Employee'::text) AND (item_id = 40003)) OR (((item_type)::text = 'Compensation'::text) AND (hashed SubPlan 1)))
+  Rows Removed by Filter: 42913
+  Buffers: shared hit=2299
+  SubPlan 1
+    ->  Index Scan using index_compensations_on_employee_id on compensations  (cost=0.29..8.77 rows=3 width=8) (actual time=0.003..0.004 rows=4 loops=1)
+          Index Cond: (employee_id = 40003)
+          Buffers: shared hit=3
+Planning Time: 0.078 ms
+Execution Time: 6.692 ms
+
+## Dashboard: overview (summary) (6 statements)
+
+SELECT COUNT(*) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' /*application='SalaryInsights'*/
+Aggregate  (cost=972.64..972.65 rows=1 width=8) (actual time=5.141..5.143 rows=1 loops=1)
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=433.62..949.57 rows=9227 width=0) (actual time=2.270..4.631 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.009..0.883 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=8) (actual time=2.254..2.254 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 489kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.003..1.255 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.131 ms
+Execution Time: 5.160 ms
+
+SELECT COUNT(DISTINCT "employees"."country_code") FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' /*application='SalaryInsights'*/
+Aggregate  (cost=1603.38..1603.39 rows=1 width=8) (actual time=7.134..7.135 rows=1 loops=1)
+  Buffers: shared hit=223
+  ->  Sort  (cost=1557.25..1580.31 rows=9227 width=3) (actual time=5.960..6.425 rows=9227 loops=1)
+        Sort Key: employees.country_code
+        Sort Method: quicksort  Memory: 529kB
+        Buffers: shared hit=223
+        ->  Hash Right Join  (cost=433.62..949.57 rows=9227 width=3) (actual time=2.236..4.712 rows=9227 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=223
+              ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.008..0.879 rows=10000 loops=1)
+                    Heap Fetches: 0
+                    Buffers: shared hit=30
+              ->  Hash  (cost=318.00..318.00 rows=9227 width=11) (actual time=2.221..2.221 rows=9227 loops=1)
+                    Buckets: 16384  Batches: 1  Memory Usage: 561kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=11) (actual time=0.004..1.220 rows=9227 loops=1)
+                          Filter: ((status)::text = 'active'::text)
+                          Rows Removed by Filter: 773
+                          Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.145 ms
+Execution Time: 7.156 ms
+
+SELECT COUNT(*) AS "count_all", "current_comp"."currency" AS "current_comp_currency" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' GROUP BY "current_comp"."currency" /*application='SalaryInsights'*/
+HashAggregate  (cost=1431.76..1431.83 rows=7 width=12) (actual time=7.228..7.230 rows=7 loops=1)
+  Group Key: current_comp.currency
+  Batches: 1  Memory Usage: 24kB
+  Buffers: shared hit=654
+  ->  Hash Right Join  (cost=433.62..1385.62 rows=9227 width=4) (actual time=2.328..5.915 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=654
+        ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=12) (actual time=0.007..1.632 rows=10000 loops=1)
+              Buffers: shared hit=461
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=8) (actual time=2.314..2.314 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 489kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.003..1.262 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.133 ms
+Execution Time: 7.251 ms
+
+SELECT COUNT(*) AS "count_all", "employees"."country_code" AS "employees_country_code" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' GROUP BY "employees"."country_code" /*application='SalaryInsights'*/
+HashAggregate  (cost=995.71..995.79 rows=8 width=11) (actual time=5.939..5.942 rows=8 loops=1)
+  Group Key: employees.country_code
+  Batches: 1  Memory Usage: 24kB
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=433.62..949.57 rows=9227 width=3) (actual time=2.348..4.806 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.009..0.857 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=11) (actual time=2.333..2.333 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 561kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=11) (actual time=0.003..1.303 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.139 ms
+Execution Time: 5.962 ms
+
+SELECT COUNT(*) AS "count_all", "employees"."department" AS "employees_department" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' GROUP BY "employees"."department" /*application='SalaryInsights'*/
+HashAggregate  (cost=995.71..995.79 rows=8 width=18) (actual time=6.499..6.501 rows=8 loops=1)
+  Group Key: employees.department
+  Batches: 1  Memory Usage: 24kB
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=433.62..949.57 rows=9227 width=10) (actual time=2.546..5.180 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.009..0.863 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=18) (actual time=2.531..2.532 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 614kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=18) (actual time=0.003..1.264 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.135 ms
+Execution Time: 6.522 ms
+
+SELECT COUNT(*) AS "count_all", EXTRACT(YEAR FROM employees.hire_date)::int AS "extract_year_from_employees_hire_date_int" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' GROUP BY EXTRACT(YEAR FROM employees.hire_date)::int /*application='SalaryInsights'*/
+HashAggregate  (cost=1041.84..1103.43 rows=4106 width=12) (actual time=7.057..7.078 rows=13 loops=1)
+  Group Key: (EXTRACT(year FROM employees.hire_date))::integer
+  Batches: 1  Memory Usage: 217kB
+  Buffers: shared hit=223
+  ->  Hash Right Join  (cost=433.62..995.71 rows=9227 width=4) (actual time=2.307..6.020 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=223
+        ->  Index Only Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..490.03 rows=9983 width=8) (actual time=0.008..0.888 rows=10000 loops=1)
+              Heap Fetches: 0
+              Buffers: shared hit=30
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=12) (actual time=2.289..2.290 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 561kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=12) (actual time=0.004..1.310 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.142 ms
+Execution Time: 7.105 ms
+
+## Dashboard: pay by department (INR) (1 statements)
+
+WITH pop AS (SELECT employees.country_code AS country, employees.department AS department, employees.job_title AS job_title, current_comp.amount AS amount, current_comp.currency AS currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active'), ranked AS ( SELECT department AS grp, currency, amount, ROW_NUMBER() OVER (PARTITION BY department, currency ORDER BY amount) AS rn, COUNT(*) OVER (PARTITION BY department, currency) AS cnt FROM pop WHERE ('INR')::text IS NULL OR currency = 'INR' ) SELECT grp, currency, MAX(cnt) AS headcount, MIN(amount) AS min, MAX(amount) AS max, ROUND(AVG(amount), 2) AS avg, ROUND(AVG(amount) FILTER (WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)), 2) AS median FROM ranked GROUP BY grp, currency ORDER BY headcount DESC, grp ASC, currency ASC LIMIT 20 /*application='SalaryInsights'*/
+Limit  (cost=1669.22..1669.27 rows=20 width=150) (actual time=8.229..8.233 rows=8 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1669.22..1669.36 rows=56 width=150) (actual time=8.228..8.231 rows=8 loops=1)
+        Sort Key: (max((count(*) OVER (?)))) DESC, employees.department, current_comp.currency
+        Sort Method: quicksort  Memory: 26kB
+        Buffers: shared hit=654
+        ->  HashAggregate  (cost=1666.61..1667.73 rows=56 width=150) (actual time=8.217..8.225 rows=8 loops=1)
+              Group Key: employees.department, current_comp.currency
+              Batches: 1  Memory Usage: 24kB
+              Buffers: shared hit=654
+              ->  WindowAgg  (cost=1473.47..1567.11 rows=2341 width=36) (actual time=6.194..7.468 rows=2318 loops=1)
+                    Buffers: shared hit=654
+                    ->  WindowAgg  (cost=1473.47..1526.15 rows=2341 width=28) (actual time=6.013..6.707 rows=2318 loops=1)
+                          Buffers: shared hit=654
+                          ->  Sort  (cost=1473.47..1479.33 rows=2341 width=20) (actual time=6.009..6.134 rows=2318 loops=1)
+                                Sort Key: employees.department, current_comp.amount
+                                Sort Method: quicksort  Memory: 208kB
+                                Buffers: shared hit=654
+                                ->  Hash Join  (cost=982.75..1342.46 rows=2341 width=20) (actual time=1.700..3.955 rows=2318 loops=1)
+                                      Hash Cond: (employees.id = current_comp.employee_id)
+                                      Buffers: shared hit=654
+                                      ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=18) (actual time=0.003..1.194 rows=9227 loops=1)
+                                            Filter: ((status)::text = 'active'::text)
+                                            Rows Removed by Filter: 773
+                                            Buffers: shared hit=193
+                                      ->  Hash  (cost=951.04..951.04 rows=2537 width=18) (actual time=1.690..1.691 rows=2530 loops=1)
+                                            Buckets: 4096  Batches: 1  Memory Usage: 171kB
+                                            Buffers: shared hit=461
+                                            ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..951.04 rows=2537 width=18) (actual time=0.005..1.367 rows=2530 loops=1)
+                                                  Filter: ((currency)::text = 'INR'::text)
+                                                  Rows Removed by Filter: 7470
+                                                  Buffers: shared hit=461
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.242 ms
+Execution Time: 8.271 ms
+
+## Dashboard: pay by job title (INR) (1 statements)
+
+WITH pop AS (SELECT employees.country_code AS country, employees.department AS department, employees.job_title AS job_title, current_comp.amount AS amount, current_comp.currency AS currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active'), ranked AS ( SELECT job_title AS grp, currency, amount, ROW_NUMBER() OVER (PARTITION BY job_title, currency ORDER BY amount) AS rn, COUNT(*) OVER (PARTITION BY job_title, currency) AS cnt FROM pop WHERE ('INR')::text IS NULL OR currency = 'INR' ) SELECT grp, currency, MAX(cnt) AS headcount, MIN(amount) AS min, MAX(amount) AS max, ROUND(AVG(amount), 2) AS avg, ROUND(AVG(amount) FILTER (WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)), 2) AS median FROM ranked GROUP BY grp, currency ORDER BY headcount DESC, grp ASC, currency ASC LIMIT 10 /*application='SalaryInsights'*/
+Limit  (cost=1676.34..1676.37 rows=10 width=160) (actual time=9.102..9.106 rows=10 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1676.34..1676.93 rows=234 width=160) (actual time=9.101..9.104 rows=10 loops=1)
+        Sort Key: (max((count(*) OVER (?)))) DESC, employees.job_title, current_comp.currency
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=654
+        ->  HashAggregate  (cost=1666.61..1671.29 rows=234 width=160) (actual time=9.060..9.091 rows=40 loops=1)
+              Group Key: employees.job_title, current_comp.currency
+              Batches: 1  Memory Usage: 93kB
+              Buffers: shared hit=654
+              ->  WindowAgg  (cost=1473.47..1567.11 rows=2341 width=46) (actual time=6.220..8.021 rows=2318 loops=1)
+                    Buffers: shared hit=654
+                    ->  WindowAgg  (cost=1473.47..1526.15 rows=2341 width=38) (actual time=6.141..7.021 rows=2318 loops=1)
+                          Buffers: shared hit=654
+                          ->  Sort  (cost=1473.47..1479.33 rows=2341 width=30) (actual time=6.137..6.282 rows=2318 loops=1)
+                                Sort Key: employees.job_title, current_comp.amount
+                                Sort Method: quicksort  Memory: 229kB
+                                Buffers: shared hit=654
+                                ->  Hash Join  (cost=982.75..1342.46 rows=2341 width=30) (actual time=1.598..3.868 rows=2318 loops=1)
+                                      Hash Cond: (employees.id = current_comp.employee_id)
+                                      Buffers: shared hit=654
+                                      ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=28) (actual time=0.003..1.112 rows=9227 loops=1)
+                                            Filter: ((status)::text = 'active'::text)
+                                            Rows Removed by Filter: 773
+                                            Buffers: shared hit=193
+                                      ->  Hash  (cost=951.04..951.04 rows=2537 width=18) (actual time=1.589..1.590 rows=2530 loops=1)
+                                            Buckets: 4096  Batches: 1  Memory Usage: 171kB
+                                            Buffers: shared hit=461
+                                            ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..951.04 rows=2537 width=18) (actual time=0.005..1.258 rows=2530 loops=1)
+                                                  Filter: ((currency)::text = 'INR'::text)
+                                                  Rows Removed by Filter: 7470
+                                                  Buffers: shared hit=461
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.233 ms
+Execution Time: 9.145 ms
+
+## Dashboard: distribution (INR) (2 statements)
+
+SELECT MIN(current_comp.amount), MAX(current_comp.amount) FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' AND "current_comp"."currency" = 'INR' LIMIT 1 /*application='SalaryInsights'*/
+Limit  (cost=1354.16..1354.17 rows=1 width=64) (actual time=4.035..4.037 rows=1 loops=1)
+  Buffers: shared hit=654
+  ->  Aggregate  (cost=1354.16..1354.17 rows=1 width=64) (actual time=4.034..4.035 rows=1 loops=1)
+        Buffers: shared hit=654
+        ->  Hash Join  (cost=982.75..1342.46 rows=2341 width=6) (actual time=1.628..3.771 rows=2318 loops=1)
+              Hash Cond: (employees.id = current_comp.employee_id)
+              Buffers: shared hit=654
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.003..1.092 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+              ->  Hash  (cost=951.04..951.04 rows=2537 width=14) (actual time=1.617..1.618 rows=2530 loops=1)
+                    Buckets: 4096  Batches: 1  Memory Usage: 151kB
+                    Buffers: shared hit=461
+                    ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..951.04 rows=2537 width=14) (actual time=0.006..1.300 rows=2530 loops=1)
+                          Filter: ((currency)::text = 'INR'::text)
+                          Rows Removed by Filter: 7470
+                          Buffers: shared hit=461
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.157 ms
+Execution Time: 4.056 ms
+
+SELECT COUNT(*) AS "count_all", LEAST(WIDTH_BUCKET(current_comp.amount, 612100.0, 3092000.0, 10), 10) AS "least_width_bucket_current_comp_amount_612100_0_3092000_0_10_10" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' AND "current_comp"."currency" = 'INR' GROUP BY LEAST(WIDTH_BUCKET(current_comp.amount, 612100.0, 3092000.0, 10), 10) /*application='SalaryInsights'*/
+HashAggregate  (cost=1365.87..1399.48 rows=2241 width=12) (actual time=5.080..5.088 rows=10 loops=1)
+  Group Key: LEAST(width_bucket(current_comp.amount, 612100.0, 3092000.0, 10), 10)
+  Batches: 1  Memory Usage: 121kB
+  Buffers: shared hit=654
+  ->  Hash Join  (cost=982.75..1354.16 rows=2341 width=4) (actual time=1.580..4.787 rows=2318 loops=1)
+        Hash Cond: (employees.id = current_comp.employee_id)
+        Buffers: shared hit=654
+        ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.003..1.190 rows=9227 loops=1)
+              Filter: ((status)::text = 'active'::text)
+              Rows Removed by Filter: 773
+              Buffers: shared hit=193
+        ->  Hash  (cost=951.04..951.04 rows=2537 width=14) (actual time=1.567..1.568 rows=2530 loops=1)
+              Buckets: 4096  Batches: 1  Memory Usage: 151kB
+              Buffers: shared hit=461
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..951.04 rows=2537 width=14) (actual time=0.005..1.252 rows=2530 loops=1)
+                    Filter: ((currency)::text = 'INR'::text)
+                    Rows Removed by Filter: 7470
+                    Buffers: shared hit=461
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.195 ms
+Execution Time: 5.112 ms
+
+## Dashboard: filtered (India) pay by dept (1 statements)
+
+WITH pop AS (SELECT employees.country_code AS country, employees.department AS department, employees.job_title AS job_title, current_comp.amount AS amount, current_comp.currency AS currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' AND "employees"."country_code" = 'IN'), ranked AS ( SELECT department AS grp, currency, amount, ROW_NUMBER() OVER (PARTITION BY department, currency ORDER BY amount) AS rn, COUNT(*) OVER (PARTITION BY department, currency) AS cnt FROM pop WHERE ('INR')::text IS NULL OR currency = 'INR' ) SELECT grp, currency, MAX(cnt) AS headcount, MIN(amount) AS min, MAX(amount) AS max, ROUND(AVG(amount), 2) AS avg, ROUND(AVG(amount) FILTER (WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)), 2) AS median FROM ranked GROUP BY grp, currency ORDER BY headcount DESC, grp ASC, currency ASC LIMIT 20 /*application='SalaryInsights'*/
+Limit  (cost=1408.58..1408.63 rows=20 width=150) (actual time=12.740..12.745 rows=8 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=1408.58..1408.72 rows=56 width=150) (actual time=12.739..12.742 rows=8 loops=1)
+        Sort Key: (max((count(*) OVER (?)))) DESC, employees.department, current_comp.currency
+        Sort Method: quicksort  Memory: 26kB
+        Buffers: shared hit=654
+        ->  HashAggregate  (cost=1405.97..1407.09 rows=56 width=150) (actual time=12.721..12.734 rows=8 loops=1)
+              Group Key: employees.department, current_comp.currency
+              Batches: 1  Memory Usage: 24kB
+              Buffers: shared hit=654
+              ->  WindowAgg  (cost=1357.13..1380.81 rows=592 width=36) (actual time=8.970..11.290 rows=2318 loops=1)
+                    Buffers: shared hit=654
+                    ->  WindowAgg  (cost=1357.13..1370.45 rows=592 width=28) (actual time=8.672..9.873 rows=2318 loops=1)
+                          Buffers: shared hit=654
+                          ->  Sort  (cost=1357.13..1358.61 rows=592 width=20) (actual time=8.667..8.855 rows=2318 loops=1)
+                                Sort Key: employees.department, current_comp.amount
+                                Sort Method: quicksort  Memory: 208kB
+                                Buffers: shared hit=654
+                                ->  Hash Join  (cost=372.46..1329.87 rows=592 width=20) (actual time=2.325..5.477 rows=2318 loops=1)
+                                      Hash Cond: (current_comp.employee_id = employees.id)
+                                      Buffers: shared hit=654
+                                      ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..951.04 rows=2537 width=18) (actual time=0.009..2.454 rows=2530 loops=1)
+                                            Filter: ((currency)::text = 'INR'::text)
+                                            Rows Removed by Filter: 7470
+                                            Buffers: shared hit=461
+                                      ->  Hash  (cost=343.00..343.00 rows=2334 width=18) (actual time=2.310..2.311 rows=2318 loops=1)
+                                            Buckets: 4096  Batches: 1  Memory Usage: 155kB
+                                            Buffers: shared hit=193
+                                            ->  Seq Scan on employees  (cost=0.00..343.00 rows=2334 width=18) (actual time=0.005..1.761 rows=2318 loops=1)
+                                                  Filter: (((status)::text = 'active'::text) AND ((country_code)::text = 'IN'::text))
+                                                  Rows Removed by Filter: 7682
+                                                  Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.327 ms
+Execution Time: 12.836 ms
+
+## Converted (USD): pay by department (3 statements)
+
+SELECT MAX(rate_date), MAX(fetched_at) FROM "fx_rates" WHERE "fx_rates"."base" = 'EUR' AND "fx_rates"."rate_date" <= '2026-10-11' LIMIT 1 /*application='SalaryInsights'*/
+Limit  (cost=1.83..1.84 rows=1 width=12) (actual time=0.014..0.015 rows=1 loops=1)
+  Buffers: shared hit=1
+  ->  Aggregate  (cost=1.83..1.84 rows=1 width=12) (actual time=0.013..0.014 rows=1 loops=1)
+        Buffers: shared hit=1
+        ->  Seq Scan on fx_rates  (cost=0.00..1.82 rows=1 width=12) (actual time=0.007..0.009 rows=6 loops=1)
+              Filter: ((rate_date <= '2026-10-11'::date) AND ((base)::text = 'EUR'::text))
+              Buffers: shared hit=1
+Planning Time: 0.131 ms
+Execution Time: 0.033 ms
+
+SELECT COUNT(*) AS "count_all", "current_comp"."currency" AS "current_comp_currency" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' GROUP BY "current_comp"."currency" /*application='SalaryInsights'*/
+HashAggregate  (cost=1431.76..1431.83 rows=7 width=12) (actual time=11.615..11.618 rows=7 loops=1)
+  Group Key: current_comp.currency
+  Batches: 1  Memory Usage: 24kB
+  Buffers: shared hit=654
+  ->  Hash Right Join  (cost=433.62..1385.62 rows=9227 width=4) (actual time=3.802..9.467 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=654
+        ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=12) (actual time=0.008..2.469 rows=10000 loops=1)
+              Buffers: shared hit=461
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=8) (actual time=3.780..3.781 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 489kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.004..2.128 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.206 ms
+Execution Time: 11.647 ms
+
+WITH pop AS (SELECT employees.country_code AS country, employees.department AS department, employees.job_title AS job_title, current_comp.amount AS amount, current_comp.currency AS currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active'), fx (currency, factor) AS (VALUES ('CAD', '0.7284768211920529801325'::numeric), ('EUR', '1.1'::numeric), ('SGD', '0.7692307692307692307692'::numeric), ('USD', '1.0'::numeric), ('AUD', '0.6626506024096385542169'::numeric), ('INR', '0.0119047619047619047619'::numeric), ('GBP', '1.294117647058823529412'::numeric)), converted AS ( SELECT pop.country, pop.department, pop.job_title, pop.amount * fx.factor AS amount FROM pop JOIN fx ON fx.currency = pop.currency ), ranked AS ( SELECT department AS grp, amount, ROW_NUMBER() OVER (PARTITION BY department ORDER BY amount) AS rn, COUNT(*) OVER (PARTITION BY department) AS cnt FROM converted ) SELECT grp, MAX(cnt) AS headcount, MIN(amount) AS min, MAX(amount) AS max, AVG(amount) AS avg, AVG(amount) FILTER (WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)) AS median FROM ranked GROUP BY grp ORDER BY headcount DESC, grp ASC LIMIT 20 /*application='SalaryInsights'*/
+Limit  (cost=2879.10..2879.12 rows=8 width=146) (actual time=46.720..46.726 rows=8 loops=1)
+  Buffers: shared hit=654
+  ->  Sort  (cost=2879.10..2879.12 rows=8 width=146) (actual time=46.719..46.723 rows=8 loops=1)
+        Sort Key: (max((count(*) OVER (?)))) DESC, employees.department
+        Sort Method: quicksort  Memory: 26kB
+        Buffers: shared hit=654
+        ->  GroupAggregate  (cost=2141.98..2878.98 rows=8 width=146) (actual time=38.369..46.710 rows=8 loops=1)
+              Group Key: employees.department
+              Buffers: shared hit=654
+              ->  WindowAgg  (cost=2141.98..2510.42 rows=9211 width=58) (actual time=35.197..42.707 rows=9227 loops=1)
+                    Buffers: shared hit=654
+                    ->  WindowAgg  (cost=2141.98..2349.23 rows=9211 width=50) (actual time=34.183..38.228 rows=9227 loops=1)
+                          Buffers: shared hit=654
+                          ->  Sort  (cost=2141.98..2165.01 rows=9211 width=42) (actual time=34.176..34.996 rows=9227 loops=1)
+                                Sort Key: employees.department, ((current_comp.amount * "*VALUES*".column2))
+                                Sort Method: quicksort  Memory: 838kB
+                                Buffers: shared hit=654
+                                ->  Hash Join  (cost=433.80..1535.48 rows=9211 width=42) (actual time=4.385..15.751 rows=9227 loops=1)
+                                      Hash Cond: ((current_comp.currency)::text = "*VALUES*".column1)
+                                      Buffers: shared hit=654
+                                      ->  Hash Join  (cost=433.62..1385.62 rows=9211 width=20) (actual time=4.371..10.329 rows=9227 loops=1)
+                                            Hash Cond: (current_comp.employee_id = employees.id)
+                                            Buffers: shared hit=654
+                                            ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.007..2.526 rows=10000 loops=1)
+                                                  Buffers: shared hit=461
+                                            ->  Hash  (cost=318.00..318.00 rows=9227 width=18) (actual time=4.350..4.351 rows=9227 loops=1)
+                                                  Buckets: 16384  Batches: 1  Memory Usage: 614kB
+                                                  Buffers: shared hit=193
+                                                  ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=18) (actual time=0.004..2.188 rows=9227 loops=1)
+                                                        Filter: ((status)::text = 'active'::text)
+                                                        Rows Removed by Filter: 773
+                                                        Buffers: shared hit=193
+                                      ->  Hash  (cost=0.09..0.09 rows=7 width=64) (actual time=0.008..0.008 rows=7 loops=1)
+                                            Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                            ->  Values Scan on "*VALUES*"  (cost=0.00..0.09 rows=7 width=64) (actual time=0.002..0.004 rows=7 loops=1)
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.504 ms
+Execution Time: 46.782 ms
+
+## Converted (USD): distribution (4 statements)
+
+SELECT MAX(rate_date), MAX(fetched_at) FROM "fx_rates" WHERE "fx_rates"."base" = 'EUR' AND "fx_rates"."rate_date" <= '2026-10-11' LIMIT 1 /*application='SalaryInsights'*/
+Limit  (cost=1.83..1.84 rows=1 width=12) (actual time=0.009..0.010 rows=1 loops=1)
+  Buffers: shared hit=1
+  ->  Aggregate  (cost=1.83..1.84 rows=1 width=12) (actual time=0.008..0.008 rows=1 loops=1)
+        Buffers: shared hit=1
+        ->  Seq Scan on fx_rates  (cost=0.00..1.82 rows=1 width=12) (actual time=0.004..0.005 rows=6 loops=1)
+              Filter: ((rate_date <= '2026-10-11'::date) AND ((base)::text = 'EUR'::text))
+              Buffers: shared hit=1
+Planning Time: 0.079 ms
+Execution Time: 0.023 ms
+
+SELECT COUNT(*) AS "count_all", "current_comp"."currency" AS "current_comp_currency" FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active' GROUP BY "current_comp"."currency" /*application='SalaryInsights'*/
+HashAggregate  (cost=1431.76..1431.83 rows=7 width=12) (actual time=6.650..6.653 rows=7 loops=1)
+  Group Key: current_comp.currency
+  Batches: 1  Memory Usage: 24kB
+  Buffers: shared hit=654
+  ->  Hash Right Join  (cost=433.62..1385.62 rows=9227 width=4) (actual time=2.243..5.313 rows=9227 loops=1)
+        Hash Cond: (current_comp.employee_id = employees.id)
+        Buffers: shared hit=654
+        ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=12) (actual time=0.006..1.224 rows=10000 loops=1)
+              Buffers: shared hit=461
+        ->  Hash  (cost=318.00..318.00 rows=9227 width=8) (actual time=2.229..2.230 rows=9227 loops=1)
+              Buckets: 16384  Batches: 1  Memory Usage: 489kB
+              Buffers: shared hit=193
+              ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.003..1.216 rows=9227 loops=1)
+                    Filter: ((status)::text = 'active'::text)
+                    Rows Removed by Filter: 773
+                    Buffers: shared hit=193
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.136 ms
+Execution Time: 6.673 ms
+
+WITH pop AS (SELECT employees.country_code AS country, employees.department AS department, employees.job_title AS job_title, current_comp.amount AS amount, current_comp.currency AS currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active'), fx (currency, factor) AS (VALUES ('CAD', '0.7284768211920529801325'::numeric), ('EUR', '1.1'::numeric), ('SGD', '0.7692307692307692307692'::numeric), ('USD', '1.0'::numeric), ('AUD', '0.6626506024096385542169'::numeric), ('INR', '0.0119047619047619047619'::numeric), ('GBP', '1.294117647058823529412'::numeric)), converted AS ( SELECT pop.country, pop.department, pop.job_title, pop.amount * fx.factor AS amount FROM pop JOIN fx ON fx.currency = pop.currency ) SELECT MIN(amount) AS low, MAX(amount) AS high FROM converted /*application='SalaryInsights'*/
+Aggregate  (cost=1604.56..1604.57 rows=1 width=64) (actual time=10.096..10.099 rows=1 loops=1)
+  Buffers: shared hit=654
+  ->  Hash Join  (cost=433.80..1512.45 rows=9211 width=38) (actual time=2.175..6.868 rows=9227 loops=1)
+        Hash Cond: ((current_comp.currency)::text = "*VALUES*".column1)
+        Buffers: shared hit=654
+        ->  Hash Join  (cost=433.62..1385.62 rows=9211 width=10) (actual time=2.131..5.232 rows=9227 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=654
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.006..1.283 rows=10000 loops=1)
+                    Buffers: shared hit=461
+              ->  Hash  (cost=318.00..318.00 rows=9227 width=8) (actual time=2.117..2.118 rows=9227 loops=1)
+                    Buckets: 16384  Batches: 1  Memory Usage: 489kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.004..1.181 rows=9227 loops=1)
+                          Filter: ((status)::text = 'active'::text)
+                          Rows Removed by Filter: 773
+                          Buffers: shared hit=193
+        ->  Hash  (cost=0.09..0.09 rows=7 width=64) (actual time=0.039..0.039 rows=7 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 9kB
+              ->  Values Scan on "*VALUES*"  (cost=0.00..0.09 rows=7 width=64) (actual time=0.033..0.035 rows=7 loops=1)
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.228 ms
+Execution Time: 10.121 ms
+
+WITH pop AS (SELECT employees.country_code AS country, employees.department AS department, employees.job_title AS job_title, current_comp.amount AS amount, current_comp.currency AS currency FROM "employees" LEFT JOIN compensations current_comp ON current_comp.employee_id = employees.id AND current_comp.effective_to IS NULL WHERE "employees"."status" = 'active'), fx (currency, factor) AS (VALUES ('CAD', '0.7284768211920529801325'::numeric), ('EUR', '1.1'::numeric), ('SGD', '0.7692307692307692307692'::numeric), ('USD', '1.0'::numeric), ('AUD', '0.6626506024096385542169'::numeric), ('INR', '0.0119047619047619047619'::numeric), ('GBP', '1.294117647058823529412'::numeric)), converted AS ( SELECT pop.country, pop.department, pop.job_title, pop.amount * fx.factor AS amount FROM pop JOIN fx ON fx.currency = pop.currency ) SELECT LEAST(WIDTH_BUCKET(amount, 7286.90476190476190475899, 238300.0, 10), 10) AS b, COUNT(*) AS n FROM converted GROUP BY b /*application='SalaryInsights'*/
+HashAggregate  (cost=1627.59..1788.78 rows=9211 width=12) (actual time=16.680..16.715 rows=10 loops=1)
+  Group Key: LEAST(width_bucket((current_comp.amount * "*VALUES*".column2), 7286.90476190476190475899, 238300.0, 10), 10)
+  Batches: 1  Memory Usage: 409kB
+  Buffers: shared hit=654
+  ->  Hash Join  (cost=433.80..1581.53 rows=9211 width=4) (actual time=2.317..15.525 rows=9227 loops=1)
+        Hash Cond: ((current_comp.currency)::text = "*VALUES*".column1)
+        Buffers: shared hit=654
+        ->  Hash Join  (cost=433.62..1385.62 rows=9211 width=10) (actual time=2.303..6.050 rows=9227 loops=1)
+              Hash Cond: (current_comp.employee_id = employees.id)
+              Buffers: shared hit=654
+              ->  Index Scan using index_compensations_one_current_per_employee on compensations current_comp  (cost=0.29..926.08 rows=9983 width=18) (actual time=0.004..1.859 rows=10000 loops=1)
+                    Buffers: shared hit=461
+              ->  Hash  (cost=318.00..318.00 rows=9227 width=8) (actual time=2.292..2.293 rows=9227 loops=1)
+                    Buckets: 16384  Batches: 1  Memory Usage: 489kB
+                    Buffers: shared hit=193
+                    ->  Seq Scan on employees  (cost=0.00..318.00 rows=9227 width=8) (actual time=0.003..1.257 rows=9227 loops=1)
+                          Filter: ((status)::text = 'active'::text)
+                          Rows Removed by Filter: 773
+                          Buffers: shared hit=193
+        ->  Hash  (cost=0.09..0.09 rows=7 width=64) (actual time=0.006..0.006 rows=7 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 9kB
+              ->  Values Scan on "*VALUES*"  (cost=0.00..0.09 rows=7 width=64) (actual time=0.002..0.003 rows=7 loops=1)
+Planning:
+  Buffers: shared hit=12
+Planning Time: 0.222 ms
+Execution Time: 16.754 ms
