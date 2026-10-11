@@ -141,6 +141,10 @@ frontend: 151 tests passed (18 files) · lines 99.55% · branches 96.07% · func
 ```
 RuboCop first found a trailing blank line in the Gemfile, and ESLint an unused variable in the rates hook; both fixed before these runs. An existing role test listed only an Admin's first two menu links and was updated for the two new ones.
 
+## Fix: the inbox redirected to the dashboard on local Docker
+
+Sravan opened http://localhost:3000/letter_opener and landed on the dashboard. Local Docker (`compose.yaml`) runs in production mode, where the inbox is off unless `EMAIL_INBOX=true`, and I had set it only in `compose.production.yaml`'s docs, not for local Docker. For anyone else the inbox routes don't exist, so the React app's catch-all sent him to the dashboard: the designed behaviour, with the wrong setting. `compose.yaml` now sets `EMAIL_INBOX=true` (local only). The same production-mode behaviour with the flag on was already checked over HTTP above (Admin 200). A `bin/rails server` started before the change also needs a restart, because the flag is read from `config/application.rb` at boot. **NOT RUN here:** `docker compose up --build` (no Docker in this workspace).
+
 ## What this does not prove
 - **Delivery through Gmail.** NOT RUN: it needs Sravan's Gmail app password on the server (`deploy/README.md`, "Account emails through Gmail").
 - **Inbox placement.** Gmail-sent mail from a personal account may land in spam for some recipients.

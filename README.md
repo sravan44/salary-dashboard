@@ -128,7 +128,7 @@ After that, an Admin adds people and changes roles on the **Users** page.
 
 **Demo email inbox (extended behaviour, beyond the accepted scope).** So the password links can be tried without a real mailbox, emails can be kept in an inbox page ([letter_opener_web](https://github.com/fgrehm/letter_opener_web)) instead of being sent:
 - **Admins only.** Sign in as an Admin, then use **Email inbox (demo)** in the menu (`/letter_opener`; in development also http://localhost:5173/letter_opener). Anyone else, signed in or not, never sees it.
-- **Development:** always on. **A server:** only with `EMAIL_INBOX=true` in its `.env`, and only while SMTP isn't set; SMTP always wins. Each deploy empties the inbox.
+- **Development and local Docker:** on (`compose.yaml` sets `EMAIL_INBOX=true`). **A server:** only with `EMAIL_INBOX=true` in its `.env`, and only while SMTP isn't set; SMTP always wins. Each deploy empties the inbox.
 - **This is for the demo only.** In production, email will go out through SMTP (`SMTP_USERNAME`, `SMTP_PASSWORD` and optionally `MAIL_FROM`; see `.env.example` and [`deploy/README.md`](deploy/README.md)), with `EMAIL_INBOX` left off.
 
 ## Exchange rates (reporting currency)
