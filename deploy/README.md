@@ -1,6 +1,6 @@
 # Deploying with Capistrano (EC2 + Docker Compose)
 
-Run every command below from your machine. `<ip>` is the instance's public or Elastic IP, and `<key>.pem` is its key pair file.
+Run every command below from your machine. The instance needs **at least 20 GB of disk**; the default 8 GB fills up during the first image build. `<ip>` is the instance's public or Elastic IP, and `<key>.pem` is its key pair file.
 
 ## Once per instance
 
@@ -8,8 +8,8 @@ Run every command below from your machine. `<ip>` is the instance's public or El
    ```bash
    mkdir -p ~/.ssh && mv ~/Downloads/<key>.pem ~/.ssh/ && chmod 600 ~/.ssh/<key>.pem
    ```
-2. **Security group.** Allow SSH (22) from your IP and HTTP (80) from anywhere.
-3. **Check SSH.** This should print Ubuntu 24.04 and about 1 GB of memory:
+2. **Security group.** Allow SSH (22) from your IP, and HTTP (80) and HTTPS (443) from anywhere.
+3. **Check SSH.** This should print Ubuntu (24.04 or later) and about 1 GB of memory:
    ```bash
    ssh -i ~/.ssh/<key>.pem ubuntu@<ip> 'lsb_release -ds; free -h; df -h /'
    ```
@@ -40,9 +40,29 @@ The server clones from GitHub, so **push first**: only pushed commits are deploy
 cd deploy
 bundle exec cap production deploy
 ```
-The first deploy builds the image on the server, which takes about 10–15 minutes on a t3.micro. Later deploys reuse cached layers. The deploy ends with `Healthy: http://localhost/up`, or with the app's last log lines if it failed.
+The first deploy builds the image on the server, which takes about 10–15 minutes on a t3.micro. Later deploys reuse cached layers. The deploy ends with `Healthy: the app answers /up`, or with the app's last log lines if it failed.
 
-Then open `http://<ip>`. Use plain **http**: there's no certificate yet.
+Then open `https://<domain>` once HTTPS is on (below); until then, `http://<ip>`.
+
+## HTTPS (once per domain)
+
+Caddy runs in front of the app and gets a Let's Encrypt certificate for `APP_HOST` automatically.
+1. **DNS.** At GoDaddy, choose **DNS → Add record**: type **A**, name e.g. `salary`, value `<ip>`, TTL 600. Check it from your machine; it should print `<ip>`:
+   ```bash
+   dig +short salary.<yourdomain>
+   ```
+2. **Security group.** Add an inbound rule: HTTPS (443) from anywhere.
+3. **Tell the server.** These settings stay in the server's `.env`, not in git:
+   ```bash
+   ssh -i ~/.ssh/<key>.pem ubuntu@<ip> "cd ~/salary-dashboard/shared && sed -i '/^APP_HOST=/d; /^FORCE_SSL=/d' .env && printf 'APP_HOST=salary.<yourdomain>\nFORCE_SSL=true\n' >> .env && grep -E '^(APP_HOST|FORCE_SSL)=' .env"
+   ```
+4. **Deploy:** `bundle exec cap production deploy`. Caddy requests the certificate on its first start, within a few seconds. Then:
+   ```bash
+   SMOKE_PASSWORD='<demo password>' ruby backend/script/smoke.rb https://salary.<yourdomain>
+   ```
+   Over HTTPS, the smoke test also checks the http → https redirect, HSTS and `Secure` cookies.
+
+If the certificate doesn't arrive, run `ssh … 'cd ~/salary-dashboard/current && docker compose -f compose.production.yaml logs caddy | tail -30'`. The usual causes are DNS not pointing at `<ip>` yet, or port 80 or 443 closed. Let's Encrypt checks the domain over port 80.
 
 ## Checking and fixing
 
@@ -63,4 +83,5 @@ This runs the 16 end-to-end checks and exits 1 if any fails.
 - **`Permission denied (publickey)`:** check the wrong key, user or IP. Ubuntu AMIs log in as `ubuntu`.
 - **`linked file … .env does not exist`:** step 4 hasn't been run on this instance.
 - **The deploy hangs at `docker:health`:** run `docker:logs`. The first start migrates and seeds 10,000 employees before it answers.
-- **The address changed after a stop/start:** associate an Elastic IP and update `DEPLOY_HOST`.
+- **The address changed after a stop/start:** associate an Elastic IP, then update `DEPLOY_HOST` and the DNS A record.
+- **Disk full (`No space left on device` while building):** the default 8 GB disk is too small. Grow the volume to 20 GB (EC2 → Volumes → Modify volume), then `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1 && docker builder prune -af`.

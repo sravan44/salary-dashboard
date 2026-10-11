@@ -1,0 +1,8 @@
+# Caddy in front of the app (compose.production.yaml). APP_HOST comes from shared/.env on the server:
+#   APP_HOST=salary.example.com → automatic HTTPS (Let's Encrypt, renewed by Caddy) and http → https redirect
+#   APP_HOST unset             → ":80", plain HTTP on the IP
+{$APP_HOST} {
+	encode zstd gzip
+	# Caddy sets X-Forwarded-For / -Proto; Rails trusts the private Docker network, so rate limits see the real client IP.
+	reverse_proxy app:3000
+}

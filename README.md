@@ -41,7 +41,7 @@ Step-by-step runbook: [`deploy/README.md`](deploy/README.md).
 **Capistrano** deploys to one **t3.micro** (Ubuntu 24.04; the running instance is in Frankfurt, `eu-central-1`). Each deploy works like this:
 1. Capistrano checks the repository out into a new release folder on the server.
 2. **Docker Compose** (`compose.production.yaml`) builds the image from that release.
-3. Compose replaces the app container. PostgreSQL runs in its own container, and its named volume survives every deploy and rollback.
+3. Compose replaces the app container behind **Caddy**, which serves HTTPS once a domain is set. PostgreSQL runs in its own container, and its named volume survives every deploy and rollback.
 4. The deploy waits until `/up` answers.
 
 The first start migrates, seeds the 10,000 employees, creates the demo sign-ins and fetches exchange rates; later starts change nothing. The weekday rate refresh runs inside the app, because the server is always on.
@@ -49,7 +49,7 @@ The first start migrates, seeds the 10,000 employees, creates the demo sign-ins 
 **1. Create the instance** (AWS console; any region, ideally one near your users)
 - **Instance:** Ubuntu Server 24.04 LTS (x86_64), **t3.micro**, 20 GB gp3 disk.
 - **Key pair:** save it as `~/.ssh/salary-dashboard.pem`, then run `chmod 600` on it.
-- **Security group:** SSH (22) from **My IP** only; HTTP (80) from anywhere.
+- **Security group:** SSH (22) from **My IP** only; HTTP (80) and HTTPS (443) from anywhere.
 - **Elastic IP:** allocate one and associate it with the instance, so the address survives restarts.
 
 **2. Prepare the server once**
@@ -88,10 +88,11 @@ SMOKE_PASSWORD='<demo password>' ruby backend/script/smoke.rb http://<elastic-ip
 
 Over HTTPS it also checks the redirect and HSTS. It exits non-zero on any failure.
 
-**Plain HTTP for now.** The app runs on `http://<elastic-ip>` with `FORCE_SSL=false`, so passwords and the session cookie travel unencrypted. That's acceptable only for a demo with demo accounts. To add HTTPS later:
-1. Point a subdomain's A record at the Elastic IP.
-2. Put a TLS proxy in front, for example Caddy with an automatic certificate.
-3. Set `FORCE_SSL=true` in `shared/.env`.
+**HTTPS.** Caddy runs in front of the app (`deploy/Caddyfile`). With `APP_HOST` set to a domain in the server's `shared/.env`, Caddy gets a Let's Encrypt certificate, renews it, and redirects http to https. Without `APP_HOST`, it serves plain HTTP on the IP. To switch HTTPS on:
+1. Point the domain's A record at the server's IP.
+2. Open port 443 in the security group.
+3. Set `APP_HOST=<domain>` and `FORCE_SSL=true` in `shared/.env`.
+4. Deploy. The exact commands are in [`deploy/README.md`](deploy/README.md).
 
 ## Run natively (development, with hot reload)
 

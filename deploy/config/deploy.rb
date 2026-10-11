@@ -13,5 +13,4 @@ set :keep_releases, 3
 append :linked_files, ".env"
 
 set :compose_file, "compose.production.yaml"
-set :health_url, "http://localhost/up"
 set :health_attempts, 60 # × 5 s: the first start builds the image, migrates and seeds 10,000 employees

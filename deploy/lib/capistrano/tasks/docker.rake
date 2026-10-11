@@ -18,15 +18,18 @@ namespace :docker do
     on roles(:app) do
       healthy = false
       fetch(:health_attempts).times do
-        break healthy = true if test("curl --fail --silent --output /dev/null #{fetch(:health_url)}")
+        # Asked inside the app container, so it works the same with or without Caddy's HTTPS in front.
+        break healthy = true if test(:docker, "compose", "-f", "#{current_path}/#{fetch(:compose_file)}",
+                                     "exec", "-T", "app", "curl", "--fail", "--silent", "--output", "/dev/null",
+                                     "http://localhost:3000/up")
 
         sleep 5
       end
       unless healthy
         within(current_path) { execute(*compose.("logs", "--tail", "60", "app")) }
-        raise "The app did not answer #{fetch(:health_url)}; its last log lines are above"
+        raise "The app did not answer /up; its last log lines are above"
       end
-      info "Healthy: #{fetch(:health_url)}"
+      info "Healthy: the app answers /up"
     end
   end
 

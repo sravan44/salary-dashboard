@@ -112,6 +112,36 @@ Without rates, the same script failed exactly the two FX checks, so it does catc
 
 Fly's trial stopped the database before the app's first start could finish. The Fly and Render configurations have been removed; only this record remains.
 
+## First live deploy (Sravan's terminal, 2026-10-11)
+
+| Attempt | Result |
+|---|---|
+| Instance 1 (Amazon Linux) | `Permission denied (publickey,gssapi-keyex,gssapi-with-mic)`: the wrong OS for `ubuntu@` and the script; relaunched with Ubuntu |
+| Instance 2 (Ubuntu 26.04 LTS, t3.micro, 908 MiB) | SSH OK via an `~/.ssh/config` alias |
+| Deploy 1 | `psych` native build: "The compiler failed to generate an executable file" |
+| Deploy 2 | The real cause: `fatal error: error writing to /tmp/…: No space left on device` (default 8 GB disk) |
+| Fix | Volume modified to 20 GB, `growpart` + `resize2fs`, `docker builder prune -af` |
+| Deploy 3 | **Success** (Sravan: "deploy is success") |
+
+## HTTPS (added after the first deploy)
+
+Caddy sits in front of the app (`deploy/Caddyfile`, `compose.production.yaml`):
+- With `APP_HOST=<domain>` in `shared/.env`: automatic Let's Encrypt certificate, renewal, http → https redirect, HTTP/3.
+- Without it: plain HTTP on `:80`, as before.
+- The app container no longer publishes a port.
+- The deploy's health check now runs `curl http://localhost:3000/up` **inside the app container**, so it doesn't depend on the proxy or the certificate.
+
+```
+$ docker compose -f compose.production.yaml config     (no APP_HOST)
+caddy: APP_HOST ":80" · published 80, 443, 443/udp · /etc/caddy/Caddyfile · app FORCE_SSL "false"
+$ APP_HOST=salary.example.com FORCE_SSL=true docker compose … config
+APP_HOST: salary.example.com · FORCE_SSL: "true"
+$ cap production deploy --dry-run
+docker:up      docker compose -f compose.production.yaml up --detach --build --remove-orphans
+docker:health  Healthy: the app answers /up
+```
+**Caddyfile validation: NOT RUN here** (no Caddy binary; Docker Hub blocked). Caddy validates its config when it starts, and a bad config would show in `docker compose logs caddy`.
+
 ## Live on EC2 (to fill in from Sravan's terminal)
 - `server-setup.sh` output: **NOT RUN**
 - `cap production deploy` output (build, health): **NOT RUN**
@@ -121,5 +151,5 @@ Fly's trial stopped the database before the app's first start could finish. The 
 
 ## What this does not prove (yet)
 - **The live deploy and rollback.**
-- **HTTPS.** Plain HTTP until a domain is pointed (A13).
+- **HTTPS live.** It needs the subdomain's A record and port 443 open, then a deploy.
 - **Backups.** One instance and one volume; a `pg_dump` schedule isn't set up yet.

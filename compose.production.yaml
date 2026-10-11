@@ -1,4 +1,5 @@
-# Production on one server (EC2 t3.micro), driven by Capistrano (deploy/). Run from a release folder:
+# Production on one server (EC2 t3.micro), driven by Capistrano (deploy/): PostgreSQL, the app, and Caddy in front
+# (HTTPS when APP_HOST is a domain). Run from a release folder:
 #   docker compose -f compose.production.yaml up --detach --build
 # Values come from the release's .env, a link to shared/.env on the server (see deploy/server-setup.sh).
 # Compose refuses to start if a required secret is missing.
@@ -30,15 +31,32 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in shared/.env}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:?set SECRET_KEY_BASE in shared/.env}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}  # private demo sign-ins; empty = no demo users
-      # Plain http on the instance's IP until a domain and certificate are added; then set FORCE_SSL=true.
+      # true once APP_HOST is a domain (HTTPS through Caddy); false for plain HTTP on the IP.
       FORCE_SSL: ${FORCE_SSL:-false}
       AUTO_SEED: "true"          # seed the 10k demo data on the first start only
       GRAPHIQL_ENABLED: "false"
-    ports:
-      - "80:3000"
+    # No published port: only Caddy reaches it, on the internal network.
     depends_on:
       db:
         condition: service_healthy
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_HOST: ${APP_HOST:-:80}   # a domain name → automatic HTTPS; unset → plain HTTP on the IP
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"              # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data           # certificates survive deploys and rollbacks
+      - caddy-config:/config
+    depends_on:
+      - app
+
 volumes:
   db-data:
+  caddy-data:
+  caddy-config:
