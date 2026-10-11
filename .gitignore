@@ -4,6 +4,10 @@
 !.env.example
 backend/config/master.key
 backend/config/credentials/*.key
+# Deploy target and SSH keys (deploy/deploy.env.example is the template)
+deploy/deploy.env
+*.pem
+deploy/log/
 
 # Ruby / Rails
 backend/log/*

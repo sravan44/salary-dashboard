@@ -34,6 +34,65 @@ Local defaults (database password, secret key) live in `compose.yaml` and suit l
 
 Build the image on its own with `docker build -t salary-insights .`. It runs in production mode; set `DATABASE_URL` (or `DB_*`) and `SECRET_KEY_BASE`. Leave `FORCE_SSL` at its default (`true`) behind an HTTPS proxy.
 
+## Deploy to AWS EC2 (Capistrano + Docker)
+
+Step-by-step runbook: [`deploy/README.md`](deploy/README.md).
+
+**Capistrano** deploys to one **t3.micro** (Ubuntu 24.04; the running instance is in Frankfurt, `eu-central-1`). Each deploy works like this:
+1. Capistrano checks the repository out into a new release folder on the server.
+2. **Docker Compose** (`compose.production.yaml`) builds the image from that release.
+3. Compose replaces the app container. PostgreSQL runs in its own container, and its named volume survives every deploy and rollback.
+4. The deploy waits until `/up` answers.
+
+The first start migrates, seeds the 10,000 employees, creates the demo sign-ins and fetches exchange rates; later starts change nothing. The weekday rate refresh runs inside the app, because the server is always on.
+
+**1. Create the instance** (AWS console; any region, ideally one near your users)
+- **Instance:** Ubuntu Server 24.04 LTS (x86_64), **t3.micro**, 20 GB gp3 disk.
+- **Key pair:** save it as `~/.ssh/salary-dashboard.pem`, then run `chmod 600` on it.
+- **Security group:** SSH (22) from **My IP** only; HTTP (80) from anywhere.
+- **Elastic IP:** allocate one and associate it with the instance, so the address survives restarts.
+
+**2. Prepare the server once**
+
+This installs 2 GB of swap (the image build needs more than 1 GB) and Docker with Compose. It also writes the secrets to `~/salary-dashboard/shared/.env` on the server only, and prints the private demo password once.
+```bash
+ssh -i ~/.ssh/salary-dashboard.pem ubuntu@<elastic-ip> 'bash -s' < deploy/server-setup.sh
+```
+
+**3. Deploy** (from your machine; the first deploy builds the image on the server and takes several minutes)
+
+Fill in your instance's details once, in a git-ignored file:
+```bash
+cd deploy
+cp deploy.env.example deploy.env
+bundle install
+bundle exec cap production deploy
+```
+In `deploy.env`, set `DEPLOY_HOST` (the Elastic IP), `DEPLOY_USER` (`ubuntu`), `DEPLOY_KEY` (the path to your `.pem`) and `BRANCH`. No AWS/IAM access keys are needed: Capistrano only uses SSH. A variable set in your shell overrides the file. `deploy/deploy.env` and `*.pem` files are git-ignored.
+
+Other commands:
+- `bundle exec cap production deploy:rollback`: run the previous release again; the data stays.
+- `bundle exec cap production docker:ps`: show the containers' state.
+- `bundle exec cap production docker:logs`: show the app's recent log.
+
+**4. Check it**
+```bash
+SMOKE_PASSWORD='<demo password>' ruby backend/script/smoke.rb http://<elastic-ip>
+```
+`backend/script/smoke.rb` uses the Ruby standard library only. It checks:
+- health and the app page;
+- 401 when signed out, and viewer and HR access (200/403);
+- cookie flags;
+- exchange rates with their source, and salary history in USD;
+- sign-out.
+
+Over HTTPS it also checks the redirect and HSTS. It exits non-zero on any failure.
+
+**Plain HTTP for now.** The app runs on `http://<elastic-ip>` with `FORCE_SSL=false`, so passwords and the session cookie travel unencrypted. That's acceptable only for a demo with demo accounts. To add HTTPS later:
+1. Point a subdomain's A record at the Elastic IP.
+2. Put a TLS proxy in front, for example Caddy with an automatic certificate.
+3. Set `FORCE_SSL=true` in `shared/.env`.
+
 ## Run natively (development, with hot reload)
 
 Prerequisites: Ruby 3.3.6 (rbenv reads `backend/.ruby-version`), Node 22, PostgreSQL 16 running locally.

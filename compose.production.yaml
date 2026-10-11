@@ -1,0 +1,44 @@
+# Production on one server (EC2 t3.micro), driven by Capistrano (deploy/). Run from a release folder:
+#   docker compose -f compose.production.yaml up --detach --build
+# Values come from the release's .env, a link to shared/.env on the server (see deploy/server-setup.sh).
+# Compose refuses to start if a required secret is missing.
+name: salary   # fixed project name: every release reuses the same containers and the same database volume
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: salary
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in shared/.env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salary"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # No ports: reachable only from the app container.
+
+  app:
+    build: .
+    image: salary-dashboard:current
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_USER: salary
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in shared/.env}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?set SECRET_KEY_BASE in shared/.env}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}  # private demo sign-ins; empty = no demo users
+      # Plain http on the instance's IP until a domain and certificate are added; then set FORCE_SSL=true.
+      FORCE_SSL: ${FORCE_SSL:-false}
+      AUTO_SEED: "true"          # seed the 10k demo data on the first start only
+      GRAPHIQL_ENABLED: "false"
+    ports:
+      - "80:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

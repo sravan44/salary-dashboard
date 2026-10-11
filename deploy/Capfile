@@ -1,0 +1,10 @@
+# Capistrano checks out each release on the server; Docker Compose builds and runs it there.
+require_relative "lib/deploy_env"
+DeployEnv.load(File.expand_path("deploy.env", __dir__)) # host, user, key, branch (git-ignored)
+
+require "capistrano/setup"
+require "capistrano/deploy"
+require "capistrano/scm/git"
+install_plugin Capistrano::SCM::Git
+
+Dir.glob("lib/capistrano/tasks/*.rake").each { |task| import task }

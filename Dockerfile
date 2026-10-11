@@ -28,8 +28,9 @@ RUN cp /tmp/Gemfile.lock.resolved Gemfile.lock && bundle exec bootsnap precompil
 
 # ---- 3. Runtime -------------------------------------------------------------------------
 FROM ruby:3.3.6-slim
+# tzdata: the FX refresh schedule is in Europe/Berlin time; installed explicitly rather than relying on the base image.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y libpq5 libyaml-0-2 curl && \
+    apt-get install --no-install-recommends -y libpq5 libyaml-0-2 curl tzdata && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Frozen at runtime: the app never rewrites Gemfile.lock; any mismatch fails loudly at boot.

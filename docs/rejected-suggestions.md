@@ -76,3 +76,7 @@
 | Cache converted dashboard aggregates | The slowest request (about 90 ms) | **Defer** | Within budget at 10k; at 100k it would be about 0.7 s. Cache per (filters, rate version) or precompute on refresh then | Data grows towards 100k |
 | Drop the redundant `index_compensations_on_employee_id` | Covered by the unique `(employee_id, effective_from)` index | **Defer** | Only a small write cost; dropping adds risk without a measured gain | Write-heavy imports |
 | Retry every failed query 3× (TanStack default) | Resilience | **Reject** | GraphQL validation errors and 4xx fail identically every time; only network/5xx are retried, at most twice | — |
+| Fly.io (first choice) | Always-on machine near India, with Fly Postgres | **Replaced** by EC2 + Capistrano | The trial stops every machine after 5 minutes unless a card is added; no Mumbai region. Config removed, history kept in the M9 evidence | — |
+| Render + Neon (free) | No card needed | **Dropped** (Sravan) | Sleeps after 15 min idle, 512 MB means no background jobs; Sravan preferred his own EC2 instance | — |
+| Kamal (Rails 8's Docker deploy tool) | The Rails-native "Capistrano for Docker": zero-downtime swaps, built-in TLS proxy | **Not chosen** (Sravan chose Capistrano) | Needs a container registry and Docker on the laptop; Capistrano driving Compose needs neither | Zero-downtime deploys or several servers |
+| HTTPS from day one | Encrypted passwords and cookies | **Defer** (Sravan: IP only for now) | No domain pointed yet; recorded as a risk in A13 | The GoDaddy subdomain is pointed |

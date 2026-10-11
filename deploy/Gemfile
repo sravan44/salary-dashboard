@@ -1,0 +1,9 @@
+# Deploy tooling only. Kept apart from backend/Gemfile so the production image doesn't carry it.
+#   cd deploy && bundle install && bundle exec cap production deploy
+source "https://rubygems.org"
+
+gem "capistrano", "~> 3.19"
+
+# AWS key pairs can be ED25519; net-ssh needs these two gems to read such keys.
+gem "bcrypt_pbkdf", "~> 1.1"
+gem "ed25519", "~> 1.3"
